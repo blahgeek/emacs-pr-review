@@ -1,0 +1,90 @@
+# Type queries into this side of the screen, and you will 
+# see intelligent typeaheads aware of the current GraphQL type schema, 
+# live syntax, and validation errors highlighted within the text.
+
+# We'll get you started with a simple query showing your username!
+query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) { 
+  repository(owner: $repo_owner, name: $repo_name) {
+    pullRequest(number: $pr_id) {
+      state
+      
+      createdAt
+      title
+      body
+      
+      reviewRequests(first: 100) {
+        nodes {
+          requestedReviewer {
+            __typename
+            ... on User {
+              login
+            }
+          }
+        }
+      }
+      
+      comments(first: 100) {
+        nodes {
+          author {
+            login
+          }
+          body
+          createdAt
+        }
+      }
+      
+      latestOpinionatedReviews(first: 100) {
+        nodes {
+          author {
+            login
+          }
+          body
+          createdAt
+          state
+        }
+      }
+      
+      reviews(first: 100) {
+        nodes {
+          body
+          state
+          author {
+            login
+          }
+          createdAt
+        }
+      }
+      
+      reviewThreads(first: 100) {
+        nodes {
+          isCollapsed
+          isResolved
+          path
+          diffSide
+          line
+          startDiffSide
+          startLine
+          comments(first: 100) {
+            nodes {
+              author {
+                login
+              }
+              body
+              createdAt
+            }
+          }
+        }
+      }
+      
+      assignees(first: 100) {
+        nodes {
+          name
+          login
+        }
+      }
+      author {
+        login
+      }
+    }
+  }
+}
