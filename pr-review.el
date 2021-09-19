@@ -134,7 +134,8 @@
       (propertize
        (concat
         (alist-get 'path top-comment)
-        (when (eq t (alist-get 'isResolved review-thread)) " - RESOLVED"))
+        (when (eq t (alist-get 'isResolved review-thread)) " - RESOLVED")
+        (when (eq t (alist-get 'isOutdated review-thread)) " - OUTDATED"))
        'face 'magit-section-secondary-heading))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
     (pr-review--insert-fontified (alist-get 'diffHunk top-comment) 'diff-mode)

@@ -52,6 +52,20 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             login
           }
           createdAt
+          
+          comments(first: 100) {
+            nodes {
+              body
+              id
+              diffHunk
+              path
+              position
+              author {
+                login
+              }
+              createdAt
+            }
+          }
         }
       }
       
@@ -59,13 +73,16 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         nodes {
           isCollapsed
           isResolved
+          isOutdated
           path
           diffSide
           line
           startDiffSide
           startLine
+          id
           comments(first: 100) {
             nodes {
+              id
               author {
                 login
               }
