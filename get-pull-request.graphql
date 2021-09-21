@@ -7,10 +7,30 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
   repository(owner: $repo_owner, name: $repo_name) {
     pullRequest(number: $pr_id) {
       state
+      headRefName
+      baseRefName
       
       createdAt
       title
       body
+      author {
+        login
+      }
+
+      labels(first: 100) {
+        nodes {
+          name
+          color
+        }
+      }
+
+      files(first: 100) {
+        nodes {
+          path
+          additions
+          deletions
+        }
+      }
       
       reviewRequests(first: 100) {
         nodes {
@@ -98,9 +118,6 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           name
           login
         }
-      }
-      author {
-        login
       }
     }
   }

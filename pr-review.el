@@ -40,30 +40,52 @@
   :group 'pr-review)
 
 (defface pr-review-author-face
-  '((t :inherit default))
+  '((t :inherit font-lock-keyword-face))
   "Face used for author names."
   :group 'pr-review)
 
 (defface pr-review-timestamp-face
-  '((t :inherit 'italic))
+  '((t :slant italic))
   "Face used for timestamps."
   :group 'pr-review)
 
+(defface pr-review-branch-face
+  '((t :inherit font-lock-variable-name-face))
+  "Face used for branchs."
+  :group 'pr-review)
+
+(defface pr-review-label-face
+  '((t :box t :foregroud "black"))
+  "Face used for labels."
+  :group 'pr-review)
+
 (defface pr-review-thread-item-title-face
-  '((t :inherit 'bold))
+  '((t :inherit bold))
   "Face used for title of review thread item."
   :group 'pr-review)
 
 (defface pr-review-thread-diff-begin-face
-  '((t :underline t :extend t :inherit 'font-lock-comment-face))
+  '((t :underline t :extend t :inherit font-lock-comment-face))
   "Face used for the beginning of thread diff hunk."
   :group 'pr-review)
 
 (defface pr-review-thread-diff-end-face
-  '((t :overline t :extend t :inherit 'font-lock-comment-face))
+  '((t :overline t :extend t :inherit font-lock-comment-face))
   "Face used for the beginning of thread diff hunk."
   :group 'pr-review)
 
+(defface pr-review-in-diff-thread-title-face
+  '((t :inherit font-lock-comment-face))
+  "Face used for the title of the in-diff thread title."
+  :group 'pr-review)
+
+(defface pr-review-link-face
+  '((t :inherit link))
+  "Face used for links."
+  :group 'pr-review)
+
+
+(defvar-local pr-review--diff-begin-point 0)
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
@@ -121,15 +143,101 @@
 
 (defun pr-review--insert-diff (diff)
   (let ((beg (point)))
-    ;; (insert diff)
+    (setq-local pr-review--diff-begin-point beg)
+
     (pr-review--insert-fontified diff 'diff-mode)
     (goto-char beg)
-    (magit-wash-sequence (apply-partially 'magit-diff-wash-diff '()))))
+    (magit-wash-sequence (apply-partially 'magit-diff-wash-diff '()))
 
+    (goto-char beg)
+    (forward-line -1)
+    (let (filename left right current-left-right)
+      (while (zerop (forward-line))
+        (let ((section-data (get-text-property (point) 'magit-section)))
+          (when (magit-file-section-p section-data)
+            (setq filename (oref section-data value))
+            (set-text-properties 0 (length filename) nil filename))
+          (when (and (magit-hunk-section-p section-data)
+                     (magit-section-position-in-heading-p))
+            (setq left (car (oref section-data from-range))
+                  right (car (oref section-data to-range))))
+          (pcase (char-after)
+            ('?\s (setq current-left-right (cons left right)
+                        left (1+ left)
+                        right (1+ right)))
+            ('?- (setq current-left-right (cons left nil)
+                       left (1+ left)))
+            ('?+ (setq current-left-right (cons nil right)
+                       right (1+ right)))
+            (_ (setq current-left-right nil)))
+          (when (car current-left-right)
+            (add-text-properties
+             (point) (1+ (point))
+             `(pr-review-diff-line-left ,(cons filename (car current-left-right)))))
+          (when (cdr current-left-right)
+            (add-text-properties
+             (point) (1+ (point))
+             `(pr-review-diff-line-right ,(cons filename (cdr current-left-right)))))
+          )))))
+
+(defun pr-review--find-section-with-value (value)
+  "Find and return the magit-section object matching VALUE."
+  (save-excursion
+    (beginning-of-buffer)
+    (when-let ((match (text-property-search-forward
+                       'magit-section value
+                       (lambda (target prop-value)
+                         (and prop-value
+                              (magit-section-p prop-value)
+                              (equal (oref prop-value value) target))))))
+      (get-text-property (prop-match-beginning match) 'magit-section))))
+
+(defun pr-review--goto-section-with-value (value)
+  (when-let ((section (pr-review--find-section-with-value value)))
+    (goto-char (oref section start))))
+
+(defun pr-review--goto-diff-line (filepath diffside line)
+  "Goto diff line for FILEPATH, DIFFSIDE (string, left or right) and LINE, return t on success."
+  (goto-char pr-review--diff-begin-point)
+  (when-let ((match (text-property-search-forward
+                     (if (equal diffside "LEFT")
+                         'pr-review-diff-line-left
+                       'pr-review-diff-line-right)
+                     (cons filepath line)
+                     t)))
+    (goto-char (prop-match-beginning match))
+    t))
+
+(defun pr-review--insert-in-diff-review-thread-link (review-thread)
+  "Insert REVIEW-THREAD inside the diff section."
+  (let-alist review-thread
+    (when (not .isOutdated)
+      (save-excursion
+        (when (pr-review--goto-diff-line
+               .path .diffSide .line)
+          (forward-line)
+          (insert
+           (propertize
+            (concat (format "> %s comments from " (length .comments.nodes))
+                    (string-join
+                     (seq-uniq
+                      (mapcar (lambda (cmt)
+                                (concat "@" (alist-get 'login (alist-get 'author cmt))))
+                              .comments.nodes))
+                     ", ")
+                    (when .isResolved " - RESOLVED")
+                    "  ")
+            'face 'pr-review-in-diff-thread-title-face))
+          (insert-button
+           "Go to thread"
+           'face 'pr-review-link-face
+           'action (lambda (_) (pr-review--goto-section-with-value .id)))
+          (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
   (magit-insert-section (pr-review-review-thread
-                         nil (eq t (alist-get 'isCollapsed review-thread)))
+                         (alist-get 'id review-thread)
+                         (eq t (alist-get 'isCollapsed review-thread)))
     (magit-insert-heading
       (propertize
        (concat
@@ -138,18 +246,24 @@
         (when (eq t (alist-get 'isOutdated review-thread)) " - OUTDATED"))
        'face 'magit-section-secondary-heading))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
-    (pr-review--insert-fontified (alist-get 'diffHunk top-comment) 'diff-mode)
+    (let (beg end)
+      (setq beg (point))
+      (pr-review--insert-fontified (alist-get 'diffHunk top-comment) 'diff-mode)
+      (setq end (point))
+      (make-button beg end
+                   'face nil
+                   'help-echo "Click to go to the line in diff."
+                   'action (lambda (_) (let-alist review-thread
+                                         (pr-review--goto-diff-line .path .diffSide .line)))))
     (insert "\n" (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
-              (insert (propertize
-                       (concat (propertize (concat "@" .author.login)
-                                           'face 'pr-review-author-face)
-                               " - "
-                               (propertize (pr-review--format-timestamp .createdAt)
-                                           'face 'pr-review-timestamp-face)
-                               " ::\n")
-                       'face 'pr-review-thread-item-title-face))
+              (insert (propertize (concat "@" .author.login)
+                                  'face 'pr-review-author-face)
+                      " - "
+                      (propertize (pr-review--format-timestamp .createdAt)
+                                  'face 'pr-review-timestamp-face)
+                      " ::\n")
               (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
               (insert "\n\n")))
           (let-alist review-thread .comments.nodes))))
@@ -205,6 +319,17 @@
                                                     (alist-get 'createdAt (car b)))))
     (let-alist pr
       (insert (propertize .title 'face 'pr-review-title-face) "\n\n")
+      (insert (propertize .baseRefName 'face 'pr-review-branch-face)
+              " <- "
+              (propertize .headRefName 'face 'pr-review-branch-face)
+              "  "
+              (mapconcat (lambda (label)
+                           (propertize (alist-get 'name label)
+                                       'face
+                                       `(:background ,(concat "#" (alist-get 'color label))
+                                         :inherit pr-review-label-face)))
+                         .labels.nodes " ")
+              "\n")
       (insert (propertize .state 'face 'pr-review-state-face)
               " - "
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
@@ -220,8 +345,15 @@
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
     (magit-insert-section (pr-review-diff)
-      (magit-insert-heading "Changed files")
-      (pr-review--insert-diff diff))))
+      (magit-insert-heading
+        (let-alist pr
+          (format "Files changed (%s files; %s additions, %s deleletions)"
+                  (length .files.nodes)
+                  (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
+                  (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
+      (pr-review--insert-diff diff))
+    (mapc 'pr-review--insert-in-diff-review-thread-link
+          (let-alist pr .reviewThreads.nodes))))
 
 
 ;;  --- mode related ---
