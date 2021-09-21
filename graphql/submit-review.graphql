@@ -1,0 +1,13 @@
+mutation($input: SubmitPullRequestReviewInput!) {
+  submitPullRequestReview(input: $input) {
+    pullRequestReview {
+      id
+      comments(first: 100) {
+        nodes {
+          body
+          id
+        }
+      }
+    }
+  }
+}

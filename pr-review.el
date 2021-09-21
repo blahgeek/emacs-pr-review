@@ -86,6 +86,7 @@
 
 
 (defvar-local pr-review--diff-begin-point 0)
+(defvar-local pr-review--pr-node-id nil)
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
@@ -266,7 +267,17 @@
                       " ::\n")
               (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
               (insert "\n\n")))
-          (let-alist review-thread .comments.nodes))))
+          (let-alist review-thread .comments.nodes))
+    (insert-button "Reply to thread"
+                   'face 'pr-review-link-face
+                   'action (lambda (_)
+                             (pr-review--open-comment-input-buffer
+                              "Reply to thread."
+                              nil
+                              (apply-partially 'pr-review--post-review-comment-reply
+                                               pr-review--pr-node-id
+                                               (alist-get 'id top-comment)))))
+    (insert "\n\n")))
 
 (defun pr-review--insert-review-section (review top-comment-id-to-review-thread)
   (let* ((review-comments (let-alist review .comments.nodes))
@@ -356,6 +367,84 @@
           (let-alist pr .reviewThreads.nodes))))
 
 
+;;  --- comment input related ---
+
+(defvar-local pr-review--comment-input-saved-window-config nil)
+(defvar-local pr-review--comment-input-exit-callback nil)
+
+(defun pr-review-comment-input-abort ()
+  "Abort current comment input buffer, discard content."
+  (interactive)
+  (unless pr-review-comment-input-mode (error "Invalid mode"))
+  (let ((saved-window-config pr-review--comment-input-saved-window-config))
+    (kill-buffer)
+    (when saved-window-config
+      (unwind-protect
+          (set-window-configuration saved-window-config)))))
+
+(defun pr-review-comment-input-exit ()
+  "Apply content and exit current comment input buffer."
+  (interactive)
+  (unless pr-review-comment-input-mode (error "Invalid mode"))
+  (when pr-review--comment-input-exit-callback
+    (funcall pr-review--comment-input-exit-callback (buffer-string)))
+  (pr-review-comment-input-abort))
+
+(defvar pr-review-comment-input-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'pr-review-comment-input-exit)
+    (define-key map "\C-c\C-k" 'pr-review-comment-input-abort)
+    map))
+
+(define-minor-mode pr-review-comment-input-mode
+  "Minor mode for PR Review comment input buffer."
+  :lighter " PrReviewCommentInput")
+
+(defun pr-review--open-comment-input-buffer (description open-callback exit-callback)
+  "Open a comment buffer for user input with DESCRIPTION,
+OPEN-CALLBACK is called when the buffer is opened,
+EXIT-CALLBACK is called when the buffer is exit (not abort),
+both callbacks are called inside the comment buffer."
+  (with-current-buffer (generate-new-buffer "*pr-review comment input*")
+    (markdown-mode)
+    (pr-review-comment-input-mode)
+
+    (setq-local
+     header-line-format (concat description " "
+                                (substitute-command-keys
+                                 (concat "Confirm with `\\[pr-review-comment-input-exit]' or "
+                                         "abort with `\\[pr-review-comment-input-abort]'")))
+     pr-review--comment-input-saved-window-config (current-window-configuration)
+     pr-review--comment-input-exit-callback exit-callback)
+
+    (when open-callback
+      (funcall open-callback))
+
+    (switch-to-buffer-other-window (current-buffer))))
+
+(defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
+  (let (res review-id)
+    (setq res (let-alist
+                  (ghub-graphql
+                   (pr-review--get-graphql 'add-review-comment-reply)
+                   `((input . ((pullRequestId . ,pr-node-id)
+                               (inReplyTo . ,top-comment-id)
+                               (body . ,body))))
+                   :auth pr-review-ghub-auth-name)
+                .data.addPullRequestReviewComment.comment))
+    (unless (equal 1 (let-alist res (length .pullRequestReview.comments.nodes)))
+      (error "Error while adding review comment reply, abort"))
+    (setq review-id (let-alist res .pullRequestReview.id))
+    (setq res (let-alist
+                  (ghub-graphql
+                   (pr-review--get-graphql 'submit-review)
+                   `((input . ((pullRequestReviewId . ,review-id)
+                               (event . "COMMENT"))))
+                   :auth pr-review-ghub-auth-name)
+                .data.submitPullRequestReview.pullRequestReview))
+    (unless (equal review-id (alist-get 'id res))
+      (error "Error while submitting review comment reply"))))
+
 ;;  --- mode related ---
 
 (defvar pr-review-mode-map
@@ -384,7 +473,7 @@
       (let (content)
         (with-temp-buffer
           (insert-file-contents-literally
-           (concat pr-review-bin-dir (symbol-name name) ".graphql"))
+           (concat pr-review-bin-dir "graphql/" (symbol-name name) ".graphql"))
           (setq content (buffer-string)))
         (push (cons name content) pr-review--graphql-cache)
         content)))
@@ -416,6 +505,7 @@
     (with-current-buffer (get-buffer-create buffer-name)
       (unless (eq major-mode 'pr-review-mode)
         (pr-review-mode))
+      (setq pr-review--pr-node-id (alist-get 'id pr-info))
       (let ((inhibit-read-only t))
         (erase-buffer)
         (pr-review--insert-pr pr-info pr-diff))

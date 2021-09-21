@@ -1,0 +1,16 @@
+mutation($input: AddPullRequestReviewCommentInput!) {
+  addPullRequestReviewComment(input: $input) {
+    comment {
+      id
+      pullRequestReview {
+        id
+        state
+        comments(first: 100) {
+          nodes {
+            id
+          }
+        }
+      }
+    }
+  }
+}

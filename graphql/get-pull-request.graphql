@@ -6,6 +6,7 @@
 query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) { 
   repository(owner: $repo_owner, name: $repo_name) {
     pullRequest(number: $pr_id) {
+      id
       state
       headRefName
       baseRefName
