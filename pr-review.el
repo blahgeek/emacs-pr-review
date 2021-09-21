@@ -88,6 +88,22 @@
 (defvar-local pr-review--diff-begin-point 0)
 (defvar-local pr-review--pr-node-id nil)
 
+;; section classes
+(defclass pr-review-review-section (magit-section) ())
+(defclass pr-review-comment-section (magit-section) ())
+(defclass pr-review-diff-section (magit-section) ())
+
+(defvar pr-review-review-thread-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
+    map))
+
+(defclass pr-review-review-thread-section (magit-section)
+  ((keymap :initform pr-review-review-thread-section-map)
+   (top-comment-id :initform nil)
+   (is-resolved :initform nil)))
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
@@ -189,7 +205,6 @@
                        'magit-section value
                        (lambda (target prop-value)
                          (and prop-value
-                              (magit-section-p prop-value)
                               (equal (oref prop-value value) target))))))
       (get-text-property (prop-match-beginning match) 'magit-section))))
 
@@ -236,9 +251,11 @@
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
-  (magit-insert-section (pr-review-review-thread
-                         (alist-get 'id review-thread)
-                         (eq t (alist-get 'isCollapsed review-thread)))
+  (magit-insert-section section (pr-review-review-thread-section
+                                 (alist-get 'id review-thread)
+                                 (eq t (alist-get 'isCollapsed review-thread)))
+    (oset section top-comment-id (alist-get 'id top-comment))
+    (oset section is-resolved (eq t (alist-get 'isResolved review-thread)))
     (magit-insert-heading
       (propertize
        (concat
@@ -270,23 +287,13 @@
           (let-alist review-thread .comments.nodes))
     (insert-button "Reply to thread"
                    'face 'pr-review-link-face
-                   'action (lambda (_)
-                             (pr-review--open-comment-input-buffer
-                              "Reply to thread."
-                              nil
-                              (apply-partially 'pr-review--post-review-comment-reply
-                                               pr-review--pr-node-id
-                                               (alist-get 'id top-comment)))))
-    (insert " ")
+                   'action 'pr-review-reply-to-thread)
+    (insert "  ")
     (let ((resolved (eq t (alist-get 'isResolved review-thread)))
           (thread-id (alist-get 'id review-thread)))
       (insert-button (if resolved "Unresolve" "Resolve")
                      'face 'pr-review-link-face
-                     'action (lambda (_)
-                               (when (y-or-n-p (format "Really %s this thread?"
-                                                       (if resolved "unresolve" "resolve")))
-                                 (pr-review--post-resolve-review-thread
-                                  thread-id (not resolved))))))
+                     'action 'pr-review-resolve-thread))
     (insert "\n\n")))
 
 (defun pr-review--insert-review-section (review top-comment-id-to-review-thread)
@@ -299,7 +306,7 @@
                             review-comments))))
     (let-alist review
       (when (or top-comment-and-review-thread-list (not (string-empty-p .body)))
-        (magit-insert-section (pr-review-review)
+        (magit-insert-section (pr-review-review-section)
           (magit-insert-heading
             "@" .author.login " REVIEW " .state " - "
             (pr-review--format-timestamp .createdAt))
@@ -312,7 +319,7 @@
 
 (defun pr-review--insert-comment-section (cmt)
   (let-alist cmt
-    (magit-insert-section (pr-review-comment)
+    (magit-insert-section (pr-review-comment-section)
       (magit-insert-heading
         "@" .author.login " COMMENTED - "
         (pr-review--format-timestamp .createdAt))
@@ -365,7 +372,7 @@
          (pr-review--insert-review-section (car review-or-comment) top-comment-id-to-review-thread))
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
-    (magit-insert-section (pr-review-diff)
+    (magit-insert-section (pr-review-diff-section)
       (magit-insert-heading
         (let-alist pr
           (format "Files changed (%s files; %s additions, %s deleletions)"
@@ -431,6 +438,29 @@ both callbacks are called inside the comment buffer."
       (funcall open-callback))
 
     (switch-to-buffer-other-window (current-buffer))))
+
+(defun pr-review-reply-to-thread (&rest _)
+  "Reply to current thread."
+  (interactive)
+  (when-let ((section (magit-current-section)))
+    (when (pr-review-review-thread-section-p section)
+      (pr-review--open-comment-input-buffer
+       "Reply to thread." nil
+       (apply-partially 'pr-review--post-review-comment-reply
+                        pr-review--pr-node-id
+                        (oref section top-comment-id))))))
+
+(defun pr-review-resolve-thread (&rest _)
+  "Resolve or unresolve current thread."
+  (interactive)
+  (when-let ((section (magit-current-section)))
+    (when (pr-review-review-thread-section-p section)
+      (let ((resolved (oref section is-resolved))
+            (thread-id (oref section value)))
+        (when (y-or-n-p (format "Really %s this thread?"
+                                (if resolved "unresolve" "resolve")))
+          (pr-review--post-resolve-review-thread
+           thread-id (not resolved)))))))
 
 ;;  --- mode related ---
 
