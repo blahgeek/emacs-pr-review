@@ -277,6 +277,16 @@
                               (apply-partially 'pr-review--post-review-comment-reply
                                                pr-review--pr-node-id
                                                (alist-get 'id top-comment)))))
+    (insert " ")
+    (let ((resolved (eq t (alist-get 'isResolved review-thread)))
+          (thread-id (alist-get 'id review-thread)))
+      (insert-button (if resolved "Unresolve" "Resolve")
+                     'face 'pr-review-link-face
+                     'action (lambda (_)
+                               (when (y-or-n-p (format "Really %s this thread?"
+                                                       (if resolved "unresolve" "resolve")))
+                                 (pr-review--post-resolve-review-thread
+                                  thread-id (not resolved))))))
     (insert "\n\n")))
 
 (defun pr-review--insert-review-section (review top-comment-id-to-review-thread)
@@ -422,29 +432,6 @@ both callbacks are called inside the comment buffer."
 
     (switch-to-buffer-other-window (current-buffer))))
 
-(defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
-  (let (res review-id)
-    (setq res (let-alist
-                  (ghub-graphql
-                   (pr-review--get-graphql 'add-review-comment-reply)
-                   `((input . ((pullRequestId . ,pr-node-id)
-                               (inReplyTo . ,top-comment-id)
-                               (body . ,body))))
-                   :auth pr-review-ghub-auth-name)
-                .data.addPullRequestReviewComment.comment))
-    (unless (equal 1 (let-alist res (length .pullRequestReview.comments.nodes)))
-      (error "Error while adding review comment reply, abort"))
-    (setq review-id (let-alist res .pullRequestReview.id))
-    (setq res (let-alist
-                  (ghub-graphql
-                   (pr-review--get-graphql 'submit-review)
-                   `((input . ((pullRequestReviewId . ,review-id)
-                               (event . "COMMENT"))))
-                   :auth pr-review-ghub-auth-name)
-                .data.submitPullRequestReview.pullRequestReview))
-    (unless (equal review-id (alist-get 'id res))
-      (error "Error while submitting review comment reply"))))
-
 ;;  --- mode related ---
 
 (defvar pr-review-mode-map
@@ -478,16 +465,24 @@ both callbacks are called inside the comment buffer."
         (push (cons name content) pr-review--graphql-cache)
         content)))
 
+(defun pr-review--execute-graphql (name variables)
+  (let-alist (ghub-graphql (pr-review--get-graphql name)
+                           variables
+                           :auth pr-review-ghub-auth-name)
+    (when .errors
+      (error "Error while making graphql request %s: %s: %s"
+             name .errors.type .errors.message))
+    .data))
+
 (defun pr-review--fetch-pr-info (repo-owner repo-name pr-id)
-  (let-alist (ghub-graphql
-              (pr-review--get-graphql 'get-pull-request)
+  (let-alist (pr-review--execute-graphql
+              'get-pull-request
               `((repo_owner . ,repo-owner)
                 (repo_name . ,repo-name)
                 (pr_id . ,(if (numberp pr-id)
                               pr-id
-                            (string-to-number pr-id))))
-              :auth pr-review-ghub-auth-name)
-    .data.repository.pullRequest))
+                            (string-to-number pr-id)))))
+    .repository.pullRequest))
 
 (defun pr-review--fetch-pr-diff (repo-owner repo-name pr-id)
   (let ((res (ghub-request "GET"
@@ -497,6 +492,32 @@ both callbacks are called inside the comment buffer."
                            :reader 'ghub--decode-payload
                            :auth pr-review-ghub-auth-name)))
     (concat res "\n")))  ;; don't why, just need an extra new line
+
+(defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
+  (let (res review-id)
+    (setq res (let-alist (pr-review--execute-graphql
+                          'add-review-comment-reply
+                          `((input . ((pullRequestId . ,pr-node-id)
+                                      (inReplyTo . ,top-comment-id)
+                                      (body . ,body)))))
+                .addPullRequestReviewComment.comment))
+    (unless (equal 1 (let-alist res (length .pullRequestReview.comments.nodes)))
+      (error "Error while adding review comment reply, abort"))
+    (setq review-id (let-alist res .pullRequestReview.id))
+    (setq res (let-alist (pr-review--execute-graphql
+                          'submit-review
+                          `((input . ((pullRequestReviewId . ,review-id)
+                                      (event . "COMMENT")))))
+                .submitPullRequestReview.pullRequestReview))
+    (unless (equal review-id (alist-get 'id res))
+      (error "Error while submitting review comment reply"))))
+
+(defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
+  (pr-review--execute-graphql (if resolve-or-unresolve
+                                  'resolve-review-thread
+                                'unresolve-review-thread)
+                              `((input . ((threadId . ,review-thread-id))))))
+
 
 (defun pr-review-open-parsed (repo-owner repo-name pr-id)
   (let ((pr-info (pr-review--fetch-pr-info repo-owner repo-name pr-id))
