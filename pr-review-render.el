@@ -198,10 +198,13 @@
     (oset section is-resolved (eq t (alist-get 'isResolved review-thread)))
     (magit-insert-heading
       (propertize
-       (concat
-        (alist-get 'path top-comment)
-        (when (eq t (alist-get 'isResolved review-thread)) " - RESOLVED")
-        (when (eq t (alist-get 'isOutdated review-thread)) " - OUTDATED"))
+       (let-alist review-thread
+         (concat
+          .path (if .startLine
+                    (format ":%s-%s" .startLine .line)
+                  (format ":%s" .line))
+          (when (eq t .isResolved) " - RESOLVED")
+          (when (eq t .isOutdated) " - OUTDATED")))
        'face 'magit-section-secondary-heading))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
     (let (beg end)
