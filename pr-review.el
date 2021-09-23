@@ -41,7 +41,9 @@
   (use-local-map pr-review-mode-map)
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) 'local
-      (kbd "TAB") 'magit-section-toggle)))
+      (kbd "TAB") 'magit-section-toggle
+      [remap evil-previous-line] 'evil-previous-visual-line
+      [remap evil-next-line] 'evil-next-visual-line)))
 
 (defun pr-review-refresh ()
   (interactive)
