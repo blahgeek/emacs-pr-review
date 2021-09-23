@@ -45,9 +45,13 @@
 
 (defun pr-review-refresh ()
   (interactive)
-  (let ((pr-info (apply 'pr-review--fetch-pr-info pr-review--pr-path))
-        (pr-diff (apply 'pr-review--fetch-pr-diff pr-review--pr-path))
-        section-id)
+  (let* ((pr-info (apply 'pr-review--fetch-pr-info pr-review--pr-path))
+         (repo-owner (car pr-review--pr-path))
+         (repo-name (cadr pr-review--pr-path))
+         (pr-diff (let-alist pr-info
+                    (pr-review--fetch-compare-cached
+                     repo-owner repo-name .baseRefOid .headRefOid)))
+         section-id)
     (setq-local pr-review--pr-node-id (alist-get 'id pr-info))
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))

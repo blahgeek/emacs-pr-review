@@ -61,14 +61,26 @@
                             (string-to-number pr-id)))))
     .repository.pullRequest))
 
-(defun pr-review--fetch-pr-diff (repo-owner repo-name pr-id)
-  (let ((res (ghub-request "GET"
-                           (format "/repos/%s/%s/pulls/%s" repo-owner repo-name pr-id)
-                           '()
-                           :headers '(("Accept" . "application/vnd.github.v3.diff"))
-                           :reader 'ghub--decode-payload
-                           :auth pr-review-ghub-auth-name)))
+(defun pr-review--fetch-compare (repo-owner repo-name base-ref head-ref)
+  (let ((res (ghub-request
+              "GET"
+              (format "/repos/%s/%s/compare/%s...%s"
+                      repo-owner repo-name base-ref head-ref)
+              '()
+              :headers '(("Accept" . "application/vnd.github.v3.diff"))
+              :reader 'ghub--decode-payload
+              :auth pr-review-ghub-auth-name)))
     (concat res "\n")))  ;; don't why, just need an extra new line
+
+(defvar-local pr-review--compare-refs nil)
+(defvar-local pr-review--compare-result nil)
+(defun pr-review--fetch-compare-cached (repo-owner repo-name base-ref head-ref)
+  (unless (and pr-review--compare-result
+               (equal pr-review--compare-refs (cons base-ref head-ref)))
+    (let ((res (pr-review--fetch-compare repo-owner repo-name base-ref head-ref)))
+      (setq-local pr-review--compare-result res
+                  pr-review--compare-refs (cons base-ref head-ref))))
+  pr-review--compare-result)
 
 (defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
   (let (res review-id)
