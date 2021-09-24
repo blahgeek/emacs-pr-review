@@ -77,6 +77,14 @@
         (funcall lang-mode))
       (font-lock-ensure))
 
+    ;; delete invisible texts
+    (let (match)
+      (beginning-of-buffer)
+      (while (setq match (text-property-search-forward 'invisible))
+        (let ((beg (prop-match-beginning match))
+              (end (prop-match-end match)))
+          (remove-text-properties beg end '(invisible nil)))))
+
     (when (eq lang-mode 'diff-mode)
       (save-excursion
         (dolist (ol (overlays-in (point-min) (point-max)))
