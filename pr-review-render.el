@@ -200,9 +200,9 @@
       (propertize
        (let-alist review-thread
          (concat
-          .path (if .startLine
-                    (format ":%s-%s" .startLine .line)
-                  (format ":%s" .line))
+          .path (when .line (if .startLine
+                                (format ":%s-%s" .startLine .line)
+                              (format ":%s" .line)))
           (when (eq t .isResolved) " - RESOLVED")
           (when (eq t .isOutdated) " - OUTDATED")))
        'face 'magit-section-secondary-heading))
