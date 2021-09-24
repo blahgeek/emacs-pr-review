@@ -53,19 +53,23 @@
           (pr-review--post-resolve-review-thread
            thread-id (not resolved)))))))
 
-;; (defun pr-review-comment (&rest _)
-;;   "Post comment to this PR."
-;;   (interactive)
-;;   (let ((section (magit-current-section))
-;;         reply-content)
-;;     (when (pr-review-comment-section-p section)
-;;       (setq reply-content (buffer-substring-no-properties
-;;                            (oref section start)
-;;                            (oref section end))))
-;;     (pr-review--open-comment-input-buffer
-;;      "Comment to PR."
-;;      (lambda () (when reply-content (insert "> " reply-content)))
-;;      nil)))
+(defun pr-review-comment (&rest _)
+  "Post comment to this PR."
+  (interactive)
+  (let ((section (magit-current-section))
+        reply-content)
+    (when (pr-review-comment-section-p section)
+      (save-excursion
+        (goto-char (oref section start))
+        (forward-line)  ;; skip section heading
+        (setq reply-content (buffer-substring-no-properties
+                             (point) (oref section end)))))
+    (pr-review--open-comment-input-buffer
+     "Comment to PR."
+     (lambda () (when reply-content (insert "> " reply-content)))
+     (apply-partially 'pr-review--post-comment
+                      pr-review--pr-node-id)
+     'refresh-after-exit)))
 
 
 

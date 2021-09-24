@@ -101,6 +101,11 @@
     (unless (equal review-id (alist-get 'id res))
       (error "Error while submitting review comment reply"))))
 
+(defun pr-review--post-comment (pr-node-id body)
+  (pr-review--execute-graphql 'add-comment
+                              `((input . ((subjectId . ,pr-node-id)
+                                          (body . ,body))))))
+
 (defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
   (pr-review--execute-graphql (if resolve-or-unresolve
                                   'resolve-review-thread
