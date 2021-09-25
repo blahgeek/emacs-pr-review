@@ -80,6 +80,16 @@
   "Face used for the title of the in-diff thread title."
   :group 'pr-review)
 
+(defface pr-review-in-diff-pending-begin-face
+  '((t :underline t :extend t :inherit bold-italic))
+  "Face used for start line of pending-thread in the diff."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-pending-end-face
+  '((t :overline t :extend t :height 0.5 :inherit bold-italic))
+  "Face used for end line of pending-thread in the diff."
+  :group 'pr-review)
+
 (defface pr-review-link-face
   '((t :inherit link))
   "Face used for links."

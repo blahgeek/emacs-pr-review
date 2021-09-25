@@ -66,7 +66,8 @@
     (let ((inhibit-modification-hooks nil)
           (diff-font-lock-syntax 'hunk-also))
       (erase-buffer)
-      (insert (string-replace "\r\n" "\n" body) " ")
+      (insert (string-replace "\r\n" "\n" body)
+              " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
       (font-lock-ensure))
@@ -176,14 +177,11 @@
           (insert (propertize (concat "> PENDING comment for "
                                       (if .startLine
                                           (format "%s:%s to %s:%s" .startSide .startLine .side .line)
-                                        (format "%s:%s" .side .line)))
-                              'face 'pr-review-in-diff-thread-title-face)
-                  "\n"
-                  (replace-regexp-in-string
-                   (rx line-start)
-                   (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
-                   (pr-review--fontify .body 'markdown-mode 'fill-column))
-                  "\n")
+                                        (format "%s:%s" .side .line))
+                                      "\n")
+                              'face 'pr-review-in-diff-pending-begin-face))
+          (pr-review--insert-fontified .body 'markdown-mode)
+          (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
         (add-text-properties beg end `(
@@ -244,7 +242,7 @@
                    'help-echo "Click to go to the line in diff."
                    'action (lambda (_) (let-alist review-thread
                                          (pr-review--goto-diff-line .path .diffSide .line)))))
-    (insert "\n" (propertize " \n" 'face 'pr-review-thread-diff-end-face))
+    (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
               (insert (propertize (concat "@" .author.login)
@@ -254,7 +252,7 @@
                                   'face 'pr-review-timestamp-face)
                       " ::\n")
               (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
-              (insert "\n\n")))
+              (insert "\n")))
           (let-alist review-thread .comments.nodes))
     (insert-button "Reply to thread"
                    'face 'pr-review-link-face
@@ -282,8 +280,7 @@
             "@" .author.login " REVIEW " .state " - "
             (pr-review--format-timestamp .createdAt))
           (unless (string-empty-p .body)
-            (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
-            (insert "\n"))
+            (pr-review--insert-fontified .body 'markdown-mode 'fill-column))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
             (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread)))))))
@@ -295,7 +292,7 @@
         "@" .author.login " COMMENTED - "
         (pr-review--format-timestamp .createdAt))
       (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
-      (insert "\n\n"))))
+      (insert "\n"))))
 
 (defun pr-review--build-top-comment-id-to-review-thread-map (pr)
   (let ((res (make-hash-table :test 'equal)))
@@ -336,7 +333,7 @@
               (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
               "\n\n")
       (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
-      (insert "\n\n"))
+      (insert "\n"))
     (dolist (review-or-comment review-or-comments)
       (pcase (cdr review-or-comment)
         ('review
@@ -351,10 +348,10 @@
                   (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
                   (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
       (pr-review--insert-diff diff)
-      (insert "\nSubmit review: ")
+      (insert "\n")
       (dolist (event '("COMMENT" "APPROVE" "REQUEST_CHANGES"))
         (insert-button event 'face 'pr-review-link-face
-                       'action (apply-partially 'pr-review-submit-review event))
+                       'action (lambda (_) (pr-review-submit-review event)))
         (insert " ")))
     (mapc 'pr-review--insert-in-diff-review-thread-link
           (let-alist pr .reviewThreads.nodes))))

@@ -174,7 +174,7 @@ When called interactively, user will be asked to choose an event."
                                       '("COMMENT" "APPROVE" "REQUEST_CHANGES")
                                       nil 'require-match)))
   (pr-review--open-input-buffer
-   (format "Submit review %s." event)
+   (format "Submit review %s (%s threads)." event (length pr-review--pending-review-threads))
    nil
    (apply-partially 'pr-review--submit-review-exit-callback
                     (current-buffer) event)

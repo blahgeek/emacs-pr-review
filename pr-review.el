@@ -44,7 +44,8 @@
   :group 'pr-review
   (use-local-map pr-review-mode-map)
   (setq-local magit-hunk-section-map pr-review--diff-section-map
-              magit-file-section-map pr-review--diff-section-map)
+              magit-file-section-map pr-review--diff-section-map
+              magit-diff-highlight-hunk-body nil)
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) 'local
