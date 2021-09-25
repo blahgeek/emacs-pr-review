@@ -288,7 +288,9 @@
             (pr-review--insert-fontified .body 'markdown-mode 'fill-column))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
-            (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread)))))))
+            (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread))
+          (when top-comment-and-review-thread-list
+            (insert "\n")))))))
 
 (defun pr-review--insert-comment-section (cmt)
   (let-alist cmt
@@ -298,6 +300,27 @@
         (pr-review--format-timestamp .createdAt))
       (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
       (insert "\n"))))
+
+(defun pr-review--insert-reviewers-info (pr-info)
+  (let ((groups (make-hash-table :test 'equal)))
+    (when-let ((review-requests (let-alist pr-info .reviewRequests.node)))
+      (when (length> review-requests 0)
+        (puthash "PENDING" (mapcar (lambda (review-request)
+                                     (let-alist review-request .requestedReviewer.login))
+                                   review-requests)
+                 groups)))
+    (mapc (lambda (opinionated-review)
+            (let-alist opinionated-review
+              (push .author.login (gethash .state groups))))
+          (let-alist pr-info .latestOpinionatedReviews.nodes))
+    (maphash (lambda (status users)
+               (insert (propertize status 'face 'pr-review-state-face)
+                       ": "
+                       (mapconcat (lambda (user)
+                                    (propertize (concat "@" user) 'face 'pr-review-author-face))
+                                  users ", ")
+                       "\n"))
+             groups)))
 
 (defun pr-review--insert-check-section (status-check-rollup)
   (magit-insert-section (pr-review--check-section)
@@ -367,7 +390,9 @@
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "
               (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
-              "\n\n")
+              "\n")
+      (pr-review--insert-reviewers-info pr)
+      (insert "\n")
       (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
       (insert "\n"))
     (dolist (review-or-comment review-or-comments)
