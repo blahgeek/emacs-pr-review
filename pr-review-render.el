@@ -32,6 +32,7 @@
 (defclass pr-review--review-section (magit-section) ())
 (defclass pr-review--comment-section (magit-section) ())
 (defclass pr-review--diff-section (magit-section) ())
+(defclass pr-review--check-section (magit-section) ())
 
 (defclass pr-review--review-thread-section (magit-section)
   ((keymap :initform pr-review--review-thread-section-map)
@@ -41,6 +42,10 @@
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
+
+(defun pr-review--insert-link (title url)
+  (insert-button title 'face 'pr-review-link-face
+                 'action (lambda (_) (browse-url url))))
 
   ;; Remove 'diff-context face, allow section highlighting in diff
   ;; but have some wierd effect, because other faces still have different backgrounds
@@ -212,7 +217,7 @@
             'face 'pr-review-in-diff-thread-title-face))
           (insert-button
            "Go to thread"
-           'face 'pr-review-link-face
+           'face 'pr-review-button-face
            'action (lambda (_) (pr-review--goto-section-with-value .id)))
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
@@ -255,13 +260,13 @@
               (insert "\n")))
           (let-alist review-thread .comments.nodes))
     (insert-button "Reply to thread"
-                   'face 'pr-review-link-face
+                   'face 'pr-review-button-face
                    'action 'pr-review-reply-to-thread)
     (insert "  ")
     (let ((resolved (eq t (alist-get 'isResolved review-thread)))
           (thread-id (alist-get 'id review-thread)))
       (insert-button (if resolved "Unresolve" "Resolve")
-                     'face 'pr-review-link-face
+                     'face 'pr-review-button-face
                      'action 'pr-review-resolve-thread))
     (insert "\n\n")))
 
@@ -293,6 +298,37 @@
         (pr-review--format-timestamp .createdAt))
       (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
       (insert "\n"))))
+
+(defun pr-review--insert-check-section (status-check-rollup)
+  (magit-insert-section (pr-review--check-section)
+    (magit-insert-heading (concat "Check status - " (alist-get 'state status-check-rollup)))
+    (mapc (lambda (node)
+            (let-alist node
+              (pcase .__typename
+                ("CheckRun"
+                 (insert (concat "- "
+                                 (propertize .name 'face 'pr-review-author-face)
+                                 ": "
+                                 (propertize .status 'face 'pr-review-state-face)
+                                 (when .conclusion
+                                   (propertize (concat " - " .conclusion)
+                                               'face 'pr-review-state-face))
+                                 (when .title
+                                   (concat " - " .title))
+                                 "\n")))
+                ("StatusContext"
+                 (insert (concat "- "
+                                 (propertize .context 'face 'pr-review-author-face)
+                                 ": "
+                                 (propertize .state 'face 'pr-review-state-face)
+                                 (when .description
+                                   (concat " - " .description))
+                                 " "))
+                 (when .targetUrl
+                   (pr-review--insert-link "Details" .targetUrl))
+                 (insert "\n")))))
+          (let-alist status-check-rollup .contexts.nodes))
+    (insert "\n")))
 
 (defun pr-review--build-top-comment-id-to-review-thread-map (pr)
   (let ((res (make-hash-table :test 'equal)))
@@ -340,6 +376,8 @@
          (pr-review--insert-review-section (car review-or-comment) top-comment-id-to-review-thread))
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
+    (pr-review--insert-check-section
+     (let-alist (nth 0 (let-alist pr .commits.nodes)) .commit.statusCheckRollup))
     (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
@@ -350,7 +388,7 @@
       (pr-review--insert-diff diff)
       (insert "\n")
       (dolist (event '("COMMENT" "APPROVE" "REQUEST_CHANGES"))
-        (insert-button event 'face 'pr-review-link-face
+        (insert-button event 'face 'pr-review-button-face
                        'action (lambda (_) (pr-review-submit-review event)))
         (insert " ")))
     (mapc 'pr-review--insert-in-diff-review-thread-link

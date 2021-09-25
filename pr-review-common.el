@@ -91,8 +91,13 @@
   :group 'pr-review)
 
 (defface pr-review-link-face
-  '((t :inherit link))
+  '((t :underline t))
   "Face used for links."
+  :group 'pr-review)
+
+(defface pr-review-button-face
+  '((t :inherit link))
+  "Face used for buttons."
   :group 'pr-review)
 
 ;; keymaps

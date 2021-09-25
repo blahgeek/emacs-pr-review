@@ -37,6 +37,7 @@
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
     (define-key map (kbd "C-c C-r") #'pr-review-refresh)
+    (define-key map (kbd "C-c C-o") #'markdown-follow-link-at-point)
     map))
 
 (define-derived-mode pr-review-mode magit-section-mode "PrReview"

@@ -120,6 +120,34 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           login
         }
       }
+
+      commits(last: 1) {
+        nodes {
+          commit {
+            oid
+            statusCheckRollup {
+              state
+              contexts(first: 100) {
+                nodes {
+                  __typename
+                  ... on CheckRun {
+                    name
+                    status
+                    conclusion
+                    title
+                  }
+                  ... on StatusContext {
+                    context
+                    description
+                    state
+                    targetUrl
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
