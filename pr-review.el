@@ -43,6 +43,8 @@
   :interactive nil
   :group 'pr-review
   (use-local-map pr-review-mode-map)
+  (setq-local magit-hunk-section-map pr-review--diff-section-map
+              magit-file-section-map pr-review--diff-section-map)
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) 'local
@@ -52,7 +54,6 @@
 
 (defun pr-review--refresh-internal ()
   "Fetch and reload current PrReview buffer."
-  (interactive)
   (let* ((pr-info (apply 'pr-review--fetch-pr-info pr-review--pr-path))
          (repo-owner (car pr-review--pr-path))
          (repo-name (cadr pr-review--pr-path))
@@ -76,6 +77,7 @@
 
 (defun pr-review-refresh (&optional force)
   "Fetch and reload current PrReview buffer, if FORCE is nil, ask confirmation when there's pending reviews."
+  (interactive)
   (when (or (null pr-review--pending-review-threads)
             force
             (yes-or-no-p "Pending review threads exist in current buffer, really refresh? "))

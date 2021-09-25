@@ -33,12 +33,6 @@
 (defclass pr-review--comment-section (magit-section) ())
 (defclass pr-review--diff-section (magit-section) ())
 
-(defvar pr-review--review-thread-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
-    map))
-
 (defclass pr-review--review-thread-section (magit-section)
   ((keymap :initform pr-review--review-thread-section-map)
    (top-comment-id :initform nil)
@@ -174,20 +168,29 @@
 
 (defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread)
   (save-excursion
-    (let-alist pending-review-thread
-      (when (pr-review--goto-diff-line .path .side .line)
-        (forward-line)
-        (insert (propertize (concat "> PENDING comment for "
-                                    (if .startLine
-                                        (format "%s:%s to %s:%s" .startSide .startLine .side .line)
-                                      (format "%s:%s" .side .line)))
-                            'face 'pr-review-in-diff-thread-title-face)
-                "\n"
-                (replace-regexp-in-string
-                 (rx line-start)
-                 (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
-                 (pr-review--fontify .body 'markdown-mode 'fill-column))
-                "\n")))))
+    (let (beg end)
+      (let-alist pending-review-thread
+        (when (pr-review--goto-diff-line .path .side .line)
+          (forward-line)
+          (setq beg (point))
+          (insert (propertize (concat "> PENDING comment for "
+                                      (if .startLine
+                                          (format "%s:%s to %s:%s" .startSide .startLine .side .line)
+                                        (format "%s:%s" .side .line)))
+                              'face 'pr-review-in-diff-thread-title-face)
+                  "\n"
+                  (replace-regexp-in-string
+                   (rx line-start)
+                   (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
+                   (pr-review--fontify .body 'markdown-mode 'fill-column))
+                  "\n")
+          (setq end (point))))
+      (when beg
+        (add-text-properties beg end `(
+                                       pr-review-pending-review-thread ,pending-review-thread
+                                       pr-review-pending-review-beg ,beg
+                                       pr-review-pending-review-end ,end
+                                       keymap ,pr-review--diff-section-map))))))
 
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."

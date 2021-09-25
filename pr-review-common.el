@@ -85,6 +85,20 @@
   "Face used for links."
   :group 'pr-review)
 
+;; keymaps
+
+(defvar pr-review--review-thread-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
+    map))
+
+(defvar pr-review--diff-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-edit-or-add-pending-review-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-submit-review)
+    map))
+
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
 (defvar-local pr-review--pr-node-id nil)
 (defvar-local pr-review--head-commit-id nil)

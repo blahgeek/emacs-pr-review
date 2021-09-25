@@ -43,10 +43,10 @@
   "Apply content and exit current comment input buffer."
   (interactive)
   (unless pr-review-input-mode (error "Invalid mode"))
-  (let ((content (buffer-string)))
+  (let ((content (buffer-substring-no-properties (point-min) (point-max))))
     (when (and pr-review--input-exit-callback
                (not (string-empty-p content)))
-      (funcall pr-review--input-exit-callback (buffer-string))))
+      (funcall pr-review--input-exit-callback content)))
   (let ((refresh-after-exit pr-review--input-refresh-after-exit)
         (prev-marker pr-review--input-prev-marker))
     (pr-review-input-abort)
@@ -54,7 +54,7 @@
       (when-let ((prev-buffer (marker-buffer prev-marker))
                  (prev-pos (marker-position prev-marker)))
         (switch-to-buffer prev-buffer)
-        (pr-review-refresh 'force)
+        (pr-review-refresh)
         (goto-char prev-pos)))))
 
 (defvar pr-review-input-mode-map
