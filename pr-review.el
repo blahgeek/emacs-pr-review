@@ -29,6 +29,10 @@
 (require 'pr-review-action)
 
 
+(defun pr-review--confirm-kill-buffer ()
+  (or (null pr-review--pending-review-threads)
+      (yes-or-no-p "Pending review threads exist in current buffer, really exit? ")))
+
 (defvar pr-review-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
@@ -39,13 +43,15 @@
   :interactive nil
   :group 'pr-review
   (use-local-map pr-review-mode-map)
+  (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) 'local
       (kbd "TAB") 'magit-section-toggle
       [remap evil-previous-line] 'evil-previous-visual-line
       [remap evil-next-line] 'evil-next-visual-line)))
 
-(defun pr-review-refresh ()
+(defun pr-review--refresh-internal ()
+  "Fetch and reload current PrReview buffer."
   (interactive)
   (let* ((pr-info (apply 'pr-review--fetch-pr-info pr-review--pr-path))
          (repo-owner (car pr-review--pr-path))
@@ -54,7 +60,10 @@
                     (pr-review--fetch-compare-cached
                      repo-owner repo-name .baseRefOid .headRefOid)))
          section-id)
-    (setq-local pr-review--pr-node-id (alist-get 'id pr-info))
+    (let-alist pr-info
+      (setq-local pr-review--pr-node-id .id
+                  pr-review--head-commit-id .headRefOid
+                  pr-review--pending-review-threads nil))
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))
     (let ((inhibit-read-only t))
@@ -63,7 +72,14 @@
     (if section-id
         (pr-review--goto-section-with-value section-id)
       (beginning-of-buffer))
-    (apply 'message "PR %s/%s/%s ready for review" pr-review--pr-path)))
+    (apply 'message "PR %s/%s/%s loaded" pr-review--pr-path)))
+
+(defun pr-review-refresh (&optional force)
+  "Fetch and reload current PrReview buffer, if FORCE is nil, ask confirmation when there's pending reviews."
+  (when (or (null pr-review--pending-review-threads)
+            force
+            (yes-or-no-p "Pending review threads exist in current buffer, really refresh? "))
+    (pr-review--refresh-internal)))
 
 (defun pr-review-open-parsed (repo-owner repo-name pr-id)
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
@@ -72,6 +88,20 @@
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
     (pr-review-refresh)
     (switch-to-buffer-other-window (current-buffer))))
+
+
+(defun pr-review-open (url)
+  (interactive "s")
+  (let ((match (string-match (rx "http" (? "s") "://github.com/"
+                                 (group (+ (not ?/))) "/"
+                                 (group (+ (not ?/))) "/pull/"
+                                 (group (+ (any digit))))
+                             url)))
+    (if (not match)
+        (message "Cannot parse URL %s" url)
+      (pr-review-open-parsed (match-string 1 url)
+                             (match-string 2 url)
+                             (string-to-number (match-string 3 url))))))
 
 
 

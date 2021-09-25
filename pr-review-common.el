@@ -87,6 +87,8 @@
 
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
 (defvar-local pr-review--pr-node-id nil)
+(defvar-local pr-review--head-commit-id nil)
+(defvar-local pr-review--pending-review-threads nil)
 
 (provide 'pr-review-common)
 ;;; pr-review-common.el ends here

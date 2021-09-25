@@ -33,8 +33,8 @@
   "Reply to current thread."
   (interactive)
   (when-let ((section (magit-current-section)))
-    (when (pr-review-review-thread-section-p section)
-      (pr-review--open-comment-input-buffer
+    (when (pr-review--review-thread-section-p section)
+      (pr-review--open-input-buffer
        "Reply to thread." nil
        (apply-partially 'pr-review--post-review-comment-reply
                         pr-review--pr-node-id
@@ -45,7 +45,7 @@
   "Resolve or unresolve current thread."
   (interactive)
   (when-let ((section (magit-current-section)))
-    (when (pr-review-review-thread-section-p section)
+    (when (pr-review--review-thread-section-p section)
       (let ((resolved (oref section is-resolved))
             (thread-id (oref section value)))
         (when (y-or-n-p (format "Really %s this thread?"
@@ -58,13 +58,13 @@
   (interactive)
   (let ((section (magit-current-section))
         reply-content)
-    (when (pr-review-comment-section-p section)
+    (when (pr-review-comment--section-p section)
       (save-excursion
         (goto-char (oref section start))
         (forward-line)  ;; skip section heading
         (setq reply-content (buffer-substring-no-properties
                              (point) (oref section end)))))
-    (pr-review--open-comment-input-buffer
+    (pr-review--open-input-buffer
      "Comment to PR."
      (lambda () (when reply-content (insert "> " reply-content)))
      (apply-partially 'pr-review--post-comment
@@ -85,9 +85,7 @@
         (cons "RIGHT" prop))))))
 
 
-(defvar-local pr-review--pending-review-threads nil)
-
-(defun pr-review--add-inline-review-thread-exit-callback (orig-buffer review-thread body)
+(defun pr-review--add-pending-review-thread-exit-callback (orig-buffer review-thread body)
   (setq review-thread (cons (cons 'body body) review-thread))
   (when (buffer-live-p orig-buffer)
     (with-current-buffer orig-buffer
@@ -96,7 +94,7 @@
       (set-buffer-modified-p t)
       (push review-thread pr-review--pending-review-threads))))
 
-(defun pr-review-add-inline-review-thread ()
+(defun pr-review-add-pending-review-thread ()
   (interactive)
   (let* ((line-info (pr-review--get-diff-line-info
                      (if (use-region-p) (1- (region-end)) (point))))
@@ -107,7 +105,7 @@
     (if (or (null line-info)
             (and start-line-info
                  (not (equal (cadr line-info) (cadr start-line-info)))))
-        (message "Cannot add inline review at current point")
+        (message "Cannot add review thread at current point")
       (setq review-thread `((path . ,(cadr line-info))
                             (line . ,(cddr line-info))
                             (side . ,(car line-info))
@@ -119,15 +117,27 @@
                            (buffer-substring-no-properties (region-beginning) (region-end))))
         (unless (string-suffix-p "\n" region-text)
           (setq region-text (concat region-text "\n"))))
-      (pr-review--open-comment-input-buffer
+      (pr-review--open-input-buffer
        "Start review thread."
        (when region-text
          (lambda () (insert "```suggestion\n" region-text "```")))
-       (apply-partially 'pr-review--add-inline-review-thread-exit-callback
+       (apply-partially 'pr-review--add-pending-review-thread-exit-callback
                         (current-buffer)
                         review-thread)))))
 
-
+(defun pr-review-submit-review (event)
+  (interactive (list (completing-read "Select review action: "
+                                      '("COMMENT" "APPROVE" "REQUEST_CHANGES")
+                                      nil 'require-match)))
+  (pr-review--open-input-buffer
+   (format "Submit review %s." event)
+   nil
+   (apply-partially 'pr-review--post-review
+                    pr-review--pr-node-id
+                    pr-review--head-commit-id
+                    event
+                    pr-review--pending-review-threads)
+   'refresh-after-exit))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

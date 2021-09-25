@@ -43,13 +43,15 @@
         content)))
 
 (defun pr-review--execute-graphql (name variables)
-  (let-alist (ghub-graphql (pr-review--get-graphql name)
+  (let ((res (ghub-graphql (pr-review--get-graphql name)
                            variables
-                           :auth pr-review-ghub-auth-name)
-    (when .errors
-      (error "Error while making graphql request %s: %s: %s"
-             name .errors.type .errors.message))
-    .data))
+                           :auth pr-review-ghub-auth-name)))
+    (let-alist res
+      (when .errors
+        (message "%s" res)
+        (error "Error while making graphql request %s: %s: %s"
+               name .errors.type .errors.message))
+      .data)))
 
 (defun pr-review--fetch-pr-info (repo-owner repo-name pr-id)
   (let-alist (pr-review--execute-graphql
@@ -112,6 +114,14 @@
                                 'unresolve-review-thread)
                               `((input . ((threadId . ,review-thread-id))))))
 
+(defun pr-review--post-review (pr-node-id commit-id event pending-threads body)
+  (pr-review--execute-graphql
+   'add-review
+   `((input . ((body . ,body)
+               (commitOID . ,commit-id)
+               (event . ,event)
+               (pullRequestId . ,pr-node-id)
+               (threads . ,pending-threads))))))
 
 
 (provide 'pr-review-api)

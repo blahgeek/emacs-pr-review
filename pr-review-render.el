@@ -29,18 +29,18 @@
 (defvar-local pr-review--diff-begin-point 0)
 
 ;; section classes
-(defclass pr-review-review-section (magit-section) ())
-(defclass pr-review-comment-section (magit-section) ())
-(defclass pr-review-diff-section (magit-section) ())
+(defclass pr-review--review-section (magit-section) ())
+(defclass pr-review--comment-section (magit-section) ())
+(defclass pr-review--diff-section (magit-section) ())
 
-(defvar pr-review-review-thread-section-map
+(defvar pr-review--review-thread-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
     (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
     map))
 
-(defclass pr-review-review-thread-section (magit-section)
-  ((keymap :initform pr-review-review-thread-section-map)
+(defclass pr-review--review-thread-section (magit-section)
+  ((keymap :initform pr-review--review-thread-section-map)
    (top-comment-id :initform nil)
    (is-resolved :initform nil)))
 
@@ -216,7 +216,7 @@
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
-  (magit-insert-section section (pr-review-review-thread-section
+  (magit-insert-section section (pr-review--review-thread-section
                                  (alist-get 'id review-thread)
                                  (eq t (alist-get 'isCollapsed review-thread)))
     (oset section top-comment-id (alist-get 'id top-comment))
@@ -274,7 +274,7 @@
                             review-comments))))
     (let-alist review
       (when (or top-comment-and-review-thread-list (not (string-empty-p .body)))
-        (magit-insert-section (pr-review-review-section)
+        (magit-insert-section (pr-review--review-section)
           (magit-insert-heading
             "@" .author.login " REVIEW " .state " - "
             (pr-review--format-timestamp .createdAt))
@@ -287,7 +287,7 @@
 
 (defun pr-review--insert-comment-section (cmt)
   (let-alist cmt
-    (magit-insert-section (pr-review-comment-section)
+    (magit-insert-section (pr-review--comment-section)
       (magit-insert-heading
         "@" .author.login " COMMENTED - "
         (pr-review--format-timestamp .createdAt))
@@ -340,14 +340,19 @@
          (pr-review--insert-review-section (car review-or-comment) top-comment-id-to-review-thread))
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
-    (magit-insert-section (pr-review-diff-section)
+    (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
           (format "Files changed (%s files; %s additions, %s deleletions)"
                   (length .files.nodes)
                   (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
                   (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
-      (pr-review--insert-diff diff))
+      (pr-review--insert-diff diff)
+      (insert "\nSubmit review: ")
+      (dolist (event '("COMMENT" "APPROVE" "REQUEST_CHANGES"))
+        (insert-button event 'face 'pr-review-link-face
+                       'action (apply-partially 'pr-review-submit-review event))
+        (insert " ")))
     (mapc 'pr-review--insert-in-diff-review-thread-link
           (let-alist pr .reviewThreads.nodes))))
 
