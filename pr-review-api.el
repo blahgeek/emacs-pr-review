@@ -27,6 +27,7 @@
 (require 'ghub)
 
 (defvar pr-review-ghub-auth-name 'emacs-pr-review)
+(defvar pr-review-ghub-username nil)
 (defvar pr-review-bin-dir (file-name-directory load-file-name))
 
 (defvar pr-review--graphql-cache '())
@@ -45,7 +46,8 @@
 (defun pr-review--execute-graphql (name variables)
   (let ((res (ghub-graphql (pr-review--get-graphql name)
                            variables
-                           :auth pr-review-ghub-auth-name)))
+                           :auth pr-review-ghub-auth-name
+                           :username pr-review-ghub-username)))
     (let-alist res
       (when .errors
         (message "%s" res)
@@ -71,7 +73,8 @@
               '()
               :headers '(("Accept" . "application/vnd.github.v3.diff"))
               :reader 'ghub--decode-payload
-              :auth pr-review-ghub-auth-name)))
+              :auth pr-review-ghub-auth-name
+              :username pr-review-ghub-username)))
     (concat res "\n")))  ;; don't why, just need an extra new line
 
 (defvar-local pr-review--compare-refs nil)
