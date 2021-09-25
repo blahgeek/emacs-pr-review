@@ -72,6 +72,62 @@
      'refresh-after-exit)))
 
 
+(defun pr-review--get-diff-line-info (pt)
+  "Return (side . (filename . line)) for diff line at PT."
+  (save-excursion
+    (goto-char pt)
+    (beginning-of-line)
+    (let (prop)
+      (cond
+       ((setq prop (get-text-property (point) 'pr-review-diff-line-left))
+        (cons "LEFT" prop))
+       ((setq prop (get-text-property (point) 'pr-review-diff-line-right))
+        (cons "RIGHT" prop))))))
+
+
+(defvar-local pr-review--pending-review-threads nil)
+
+(defun pr-review--add-inline-review-thread-exit-callback (orig-buffer review-thread body)
+  (setq review-thread (cons (cons 'body body) review-thread))
+  (when (buffer-live-p orig-buffer)
+    (with-current-buffer orig-buffer
+      (let ((inhibit-read-only t))
+        (pr-review--insert-in-diff-pending-review-thread review-thread))
+      (set-buffer-modified-p t)
+      (push review-thread pr-review--pending-review-threads))))
+
+(defun pr-review-add-inline-review-thread ()
+  (interactive)
+  (let* ((line-info (pr-review--get-diff-line-info
+                     (if (use-region-p) (1- (region-end)) (point))))
+         (start-line-info (when (use-region-p)
+                            (pr-review--get-diff-line-info (region-beginning))))
+         region-text
+         review-thread)
+    (if (or (null line-info)
+            (and start-line-info
+                 (not (equal (cadr line-info) (cadr start-line-info)))))
+        (message "Cannot add inline review at current point")
+      (setq review-thread `((path . ,(cadr line-info))
+                            (line . ,(cddr line-info))
+                            (side . ,(car line-info))
+                            (startLine . ,(cddr start-line-info))
+                            (startSide . ,(car start-line-info))))
+      (when (use-region-p)
+        (setq region-text (replace-regexp-in-string
+                           (rx line-start (any ?+ ?- ?\s)) ""
+                           (buffer-substring-no-properties (region-beginning) (region-end))))
+        (unless (string-suffix-p "\n" region-text)
+          (setq region-text (concat region-text "\n"))))
+      (pr-review--open-comment-input-buffer
+       "Start review thread."
+       (when region-text
+         (lambda () (insert "```suggestion\n" region-text "```")))
+       (apply-partially 'pr-review--add-inline-review-thread-exit-callback
+                        (current-buffer)
+                        review-thread)))))
+
+
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

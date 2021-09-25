@@ -172,6 +172,23 @@
     (goto-char (prop-match-beginning match))
     t))
 
+(defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread)
+  (save-excursion
+    (let-alist pending-review-thread
+      (when (pr-review--goto-diff-line .path .side .line)
+        (forward-line)
+        (insert (propertize (concat "> PENDING comment for "
+                                    (if .startLine
+                                        (format "%s:%s to %s:%s" .startSide .startLine .side .line)
+                                      (format "%s:%s" .side .line)))
+                            'face 'pr-review-in-diff-thread-title-face)
+                "\n"
+                (replace-regexp-in-string
+                 (rx line-start)
+                 (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
+                 (pr-review--fontify .body 'markdown-mode 'fill-column))
+                "\n")))))
+
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."
   (let-alist review-thread
