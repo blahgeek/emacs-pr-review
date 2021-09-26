@@ -75,7 +75,7 @@ both callbacks are called inside the comment buffer,
 if REFRESH-AFTER-EXIT is not nil, refresh the current pr-review buffer after exit."
   (let ((marker (point-marker)))
     (with-current-buffer (generate-new-buffer "*pr-review comment input*")
-      (markdown-mode)
+      (gfm-mode)
       (pr-review-input-mode)
 
       (setq-local

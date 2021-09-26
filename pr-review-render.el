@@ -90,7 +90,7 @@
         (funcall lang-mode))
       (font-lock-ensure))
 
-    (when (eq lang-mode 'markdown-mode)
+    (when (eq lang-mode 'gfm-mode)
       (let ((markdown-display-remote-images t)
             (markdown-max-image-size `(,(window-pixel-width) . nil)))
         (markdown-display-inline-images))
@@ -210,7 +210,7 @@
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          (pr-review--insert-fontified .body 'markdown-mode)
+          (pr-review--insert-fontified .body 'gfm-mode)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
@@ -285,7 +285,7 @@
                   (propertize (pr-review--format-timestamp .createdAt)
                               'face 'pr-review-timestamp-face)
                   " ::")
-                (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
+                (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
     (insert-button "Reply to thread"
@@ -316,7 +316,7 @@
             "@" .author.login " REVIEW " .state " - "
             (pr-review--format-timestamp .createdAt))
           (unless (string-empty-p .body)
-            (pr-review--insert-fontified .body 'markdown-mode 'fill-column))
+            (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
             (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread))
@@ -331,7 +331,7 @@
       (magit-insert-heading
         "@" .author.login " COMMENTED - "
         (pr-review--format-timestamp .createdAt))
-      (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
+      (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
       (insert "\n"))))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -426,7 +426,7 @@
               "\n")
       (pr-review--insert-reviewers-info pr)
       (insert "\n")
-      (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
+      (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
       (insert "\n"))
     (dolist (review-or-comment review-or-comments)
       (pcase (cdr review-or-comment)
