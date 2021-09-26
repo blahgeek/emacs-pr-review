@@ -30,12 +30,15 @@
 
 ;; section classes
 (defclass pr-review--review-section (magit-section) ())
-(defclass pr-review--comment-section (magit-section) ())
+
+(defclass pr-review--comment-section (magit-section)
+  ((keymap :initform pr-review-comment-section-map)))
+
 (defclass pr-review--diff-section (magit-section) ())
 (defclass pr-review--check-section (magit-section) ())
 
 (defclass pr-review--review-thread-section (magit-section)
-  ((keymap :initform pr-review--review-thread-section-map)
+  ((keymap :initform pr-review-review-thread-section-map)
    (top-comment-id :initform nil)
    (is-resolved :initform nil)))
 
@@ -193,7 +196,7 @@
                                        pr-review-pending-review-thread ,pending-review-thread
                                        pr-review-pending-review-beg ,beg
                                        pr-review-pending-review-end ,end
-                                       keymap ,pr-review--diff-section-map))))))
+                                       keymap ,pr-review-diff-section-map))))))
 
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."
