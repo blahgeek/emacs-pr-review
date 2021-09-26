@@ -223,5 +223,19 @@ When called interactively, user will be asked to choose an event."
      (apply-partially 'pr-review--update-review-comment id)
      'refresh-after-exit)))
 
+(defun pr-review-view-file ()
+  "View the full file under current point (must in some diff)."
+  (interactive)
+  (pcase-let ((`(,side . (,filepath . ,line)) (pr-review--get-diff-line-info (point))))
+    (when (and side filepath line)
+      (let* ((content (pr-review--fetch-file filepath
+                                             (if (equal side "LEFT") 'base 'head)))
+             (tempfile (make-temp-file (if (equal side "LEFT") "BASE~" "HEAD~")
+                                       nil
+                                       (concat "~" (file-name-nondirectory filepath))
+                                       content)))
+        (with-current-buffer (find-file-other-window tempfile)
+          (goto-line line))))))
+
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
