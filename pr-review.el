@@ -90,7 +90,7 @@
       (pr-review-mode))
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
     (pr-review-refresh)
-    (switch-to-buffer-other-window (current-buffer))))
+    (switch-to-buffer (current-buffer))))
 
 
 (defun pr-review-open (url)
