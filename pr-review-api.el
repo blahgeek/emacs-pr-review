@@ -30,18 +30,12 @@
 (defvar pr-review-ghub-username nil)
 (defvar pr-review-bin-dir (file-name-directory load-file-name))
 
-(defvar pr-review--graphql-cache '())
-
 (defun pr-review--get-graphql (name)
   "Get graphql content for NAME (symbol), cached."
-  (or (alist-get name pr-review--graphql-cache)
-      (let (content)
-        (with-temp-buffer
-          (insert-file-contents-literally
-           (concat pr-review-bin-dir "graphql/" (symbol-name name) ".graphql"))
-          (setq content (buffer-string)))
-        (push (cons name content) pr-review--graphql-cache)
-        content)))
+  (with-temp-buffer
+    (insert-file-contents-literally
+     (concat pr-review-bin-dir "graphql/" (symbol-name name) ".graphql"))
+    (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun pr-review--execute-graphql (name variables)
   (let ((res (ghub-graphql (pr-review--get-graphql name)
