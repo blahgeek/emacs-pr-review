@@ -48,6 +48,8 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       
       comments(first: 100) {
         nodes {
+          id
+          viewerCanUpdate
           author {
             login
           }
@@ -69,6 +71,8 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       
       reviews(first: 100) {
         nodes {
+          id
+          viewerCanUpdate
           body
           state
           author {

@@ -111,6 +111,13 @@
 (defvar pr-review-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'pr-review-comment)
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-comment)
+    map))
+
+(defvar pr-review-review-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-comment)
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-review)
     map))
 
 (defvar pr-review-diff-section-map

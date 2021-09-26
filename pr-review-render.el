@@ -29,10 +29,15 @@
 (defvar-local pr-review--diff-begin-point 0)
 
 ;; section classes
-(defclass pr-review--review-section (magit-section) ())
+(defclass pr-review--review-section (magit-section)
+  ((keymap :initform pr-review-review-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
 
 (defclass pr-review--comment-section (magit-section)
-  ((keymap :initform pr-review-comment-section-map)))
+  ((keymap :initform pr-review-comment-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
 
 (defclass pr-review--diff-section (magit-section) ())
 (defclass pr-review--check-section (magit-section) ())
@@ -288,7 +293,9 @@
                             review-comments))))
     (let-alist review
       (when (or top-comment-and-review-thread-list (not (string-empty-p .body)))
-        (magit-insert-section (pr-review--review-section)
+        (magit-insert-section section (pr-review--review-section .id)
+          (oset section updatable .viewerCanUpdate)
+          (oset section body .body)
           (magit-insert-heading
             "@" .author.login " REVIEW " .state " - "
             (pr-review--format-timestamp .createdAt))
@@ -302,7 +309,9 @@
 
 (defun pr-review--insert-comment-section (cmt)
   (let-alist cmt
-    (magit-insert-section (pr-review--comment-section)
+    (magit-insert-section section (pr-review--comment-section .id)
+      (oset section updatable .viewerCanUpdate)
+      (oset section body .body)
       (magit-insert-heading
         "@" .author.login " COMMENTED - "
         (pr-review--format-timestamp .createdAt))

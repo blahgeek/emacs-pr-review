@@ -111,6 +111,16 @@
                               `((input . ((subjectId . ,pr-node-id)
                                           (body . ,body))))))
 
+(defun pr-review--update-comment (comment-id body)
+  (pr-review--execute-graphql 'update-comment
+                              `((input . ((id . ,comment-id)
+                                          (body . ,body))))))
+
+(defun pr-review--update-review (review-id body)
+  (pr-review--execute-graphql 'update-review
+                              `((input . ((pullRequestReviewId . ,review-id)
+                                          (body . ,body))))))
+
 (defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
   (pr-review--execute-graphql (if resolve-or-unresolve
                                   'resolve-review-thread

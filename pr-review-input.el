@@ -91,6 +91,7 @@ if REFRESH-AFTER-EXIT is not nil, refresh the current pr-review buffer after exi
       (when open-callback
         (funcall open-callback))
 
+      (replace-string-in-region "\r\n" "\n" (point-min) (point-max))
       (switch-to-buffer-other-window (current-buffer)))))
 
 

@@ -63,12 +63,9 @@
   (interactive)
   (let ((section (magit-current-section))
         reply-content)
-    (when (pr-review-comment--section-p section)
-      (save-excursion
-        (goto-char (oref section start))
-        (forward-line)  ;; skip section heading
-        (setq reply-content (buffer-substring-no-properties
-                             (point) (oref section end)))))
+    (when (or (pr-review--comment-section-p section)
+              (pr-review--review-section-p section))
+      (setq reply-content (oref section body)))
     (pr-review--open-input-buffer
      "Comment to PR."
      (lambda () (when reply-content (insert "> " reply-content)))
@@ -183,6 +180,34 @@ When called interactively, user will be asked to choose an event."
    (apply-partially 'pr-review--submit-review-exit-callback
                     (current-buffer) event)
    'refresh-after-exit))
+
+(defun pr-review-edit-comment ()
+  "Edit comment under current point."
+  (interactive)
+  (when-let* ((section (magit-current-section))
+              (_ (pr-review--comment-section-p section))
+              (updatable (oref section updatable))
+              (id (oref section value))
+              (body (oref secton body)))
+    (pr-review--open-input-buffer
+     "Update comment."
+     (lambda () (insert body))
+     (apply-partially 'pr-review--update-comment id)
+     'refresh-after-exit)))
+
+(defun pr-review-edit-review ()
+  "Edit review body under current point."
+  (interactive)
+  (when-let* ((section (magit-current-section))
+              (_ (pr-review--review-section-p section))
+              (updatable (oref section updatable))
+              (id (oref section value))
+              (body (oref section body)))
+    (pr-review--open-input-buffer
+     "Update review."
+     (lambda () (insert body))
+     (apply-partially 'pr-review--update-review id)
+     'refresh-after-exit)))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
