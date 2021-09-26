@@ -33,6 +33,8 @@
   "Reply to current thread."
   (interactive)
   (when-let ((section (magit-current-section)))
+    (when (pr-review--review-thread-item-section-p section)
+      (setq section (oref section parent)))
     (when (pr-review--review-thread-section-p section)
       (pr-review--open-input-buffer
        "Reply to thread." nil
@@ -45,6 +47,8 @@
   "Resolve or unresolve current thread."
   (interactive)
   (when-let ((section (magit-current-section)))
+    (when (pr-review--review-thread-item-section-p section)
+      (setq section (oref section parent)))
     (when (pr-review--review-thread-section-p section)
       (let ((resolved (oref section is-resolved))
             (thread-id (oref section value)))

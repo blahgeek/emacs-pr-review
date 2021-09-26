@@ -42,6 +42,9 @@
    (top-comment-id :initform nil)
    (is-resolved :initform nil)))
 
+(defclass pr-review--review-thread-item-section (magit-section)
+  ((keymap :initform pr-review-review-thread-section-map)))  ;; same as above
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
@@ -253,14 +256,16 @@
     (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
-              (insert (propertize (concat "@" .author.login)
-                                  'face 'pr-review-author-face)
-                      " - "
-                      (propertize (pr-review--format-timestamp .createdAt)
-                                  'face 'pr-review-timestamp-face)
-                      " ::\n")
-              (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
-              (insert "\n")))
+              (magit-insert-section (pr-review--review-thread-item-section .id)
+                (magit-insert-heading
+                  (propertize (concat "@" .author.login)
+                              'face 'pr-review-author-face)
+                  " - "
+                  (propertize (pr-review--format-timestamp .createdAt)
+                              'face 'pr-review-timestamp-face)
+                  " ::")
+                (pr-review--insert-fontified .body 'markdown-mode 'fill-column)
+                (insert "\n"))))
           (let-alist review-thread .comments.nodes))
     (insert-button "Reply to thread"
                    'face 'pr-review-button-face
