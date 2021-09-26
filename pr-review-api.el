@@ -49,37 +49,40 @@
                name .errors.type .errors.message))
       .data)))
 
-(defun pr-review--fetch-pr-info (repo-owner repo-name pr-id)
-  (let-alist (pr-review--execute-graphql
-              'get-pull-request
-              `((repo_owner . ,repo-owner)
-                (repo_name . ,repo-name)
-                (pr_id . ,(if (numberp pr-id)
-                              pr-id
-                            (string-to-number pr-id)))))
-    .repository.pullRequest))
+(defun pr-review--fetch-pr-info ()
+  (pcase-let ((`(,repo-owner ,repo-name ,pr-id) pr-review--pr-path))
+    (let-alist (pr-review--execute-graphql
+                'get-pull-request
+                `((repo_owner . ,repo-owner)
+                  (repo_name . ,repo-name)
+                  (pr_id . ,(if (numberp pr-id)
+                                pr-id
+                              (string-to-number pr-id)))))
+      .repository.pullRequest)))
 
-(defun pr-review--fetch-compare (repo-owner repo-name base-ref head-ref)
-  (let ((res (ghub-request
-              "GET"
-              (format "/repos/%s/%s/compare/%s...%s"
-                      repo-owner repo-name base-ref head-ref)
-              '()
-              :headers '(("Accept" . "application/vnd.github.v3.diff"))
-              :reader 'ghub--decode-payload
-              :auth pr-review-ghub-auth-name
-              :username pr-review-ghub-username)))
+(defun pr-review--fetch-compare (base-ref head-ref)
+  (let* ((repo-owner (car pr-review--pr-path))
+         (repo-name (cadr pr-review--pr-path))
+         (res (ghub-request
+               "GET"
+               (format "/repos/%s/%s/compare/%s...%s"
+                       repo-owner repo-name base-ref head-ref)
+               '()
+               :headers '(("Accept" . "application/vnd.github.v3.diff"))
+               :reader 'ghub--decode-payload
+               :auth pr-review-ghub-auth-name
+               :username pr-review-ghub-username)))
     (concat res "\n")))  ;; don't why, just need an extra new line
 
-(defvar-local pr-review--compare-refs nil)
-(defvar-local pr-review--compare-result nil)
-(defun pr-review--fetch-compare-cached (repo-owner repo-name base-ref head-ref)
-  (unless (and pr-review--compare-result
-               (equal pr-review--compare-refs (cons base-ref head-ref)))
-    (let ((res (pr-review--fetch-compare repo-owner repo-name base-ref head-ref)))
-      (setq-local pr-review--compare-result res
-                  pr-review--compare-refs (cons base-ref head-ref))))
-  pr-review--compare-result)
+(defvar-local pr-review--compare-cache-refs nil)
+(defvar-local pr-review--compare-cache-result nil)
+(defun pr-review--fetch-compare-cached (base-ref head-ref)
+  (unless (and pr-review--compare-cache-result
+               (equal pr-review--compare-cache-refs (cons base-ref head-ref)))
+    (let ((res (pr-review--fetch-compare base-ref head-ref)))
+      (setq-local pr-review--compare-cache-result res
+                  pr-review--compare-cache-refs (cons base-ref head-ref))))
+  pr-review--compare-cache-result)
 
 (defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
   (let (res review-id)

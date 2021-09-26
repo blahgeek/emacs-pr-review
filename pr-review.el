@@ -56,16 +56,15 @@
 
 (defun pr-review--refresh-internal ()
   "Fetch and reload current PrReview buffer."
-  (let* ((pr-info (apply 'pr-review--fetch-pr-info pr-review--pr-path))
-         (repo-owner (car pr-review--pr-path))
-         (repo-name (cadr pr-review--pr-path))
+  (let* ((pr-info (pr-review--fetch-pr-info))
          (pr-diff (let-alist pr-info
                     (pr-review--fetch-compare-cached
-                     repo-owner repo-name .baseRefOid .headRefOid)))
+                     .baseRefOid .headRefOid)))
          section-id)
     (let-alist pr-info
       (setq-local pr-review--pr-node-id .id
                   pr-review--head-commit-id .headRefOid
+                  pr-review--base-commit-id .baseRefOid
                   pr-review--pending-review-threads nil))
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))
