@@ -129,6 +129,7 @@
 
 (defvar pr-review-diff-section-map
   (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-pending-review-thread)
     (define-key map (kbd "C-c C-c") #'pr-review-edit-or-add-pending-review-thread)
     (define-key map (kbd "C-c C-s") #'pr-review-submit-review)
     map))
