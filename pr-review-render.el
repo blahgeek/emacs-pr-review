@@ -90,6 +90,18 @@
         (funcall lang-mode))
       (font-lock-ensure))
 
+    (when (eq lang-mode 'markdown-mode)
+      (let ((markdown-display-remote-images t)
+            (markdown-max-image-size `(,(window-pixel-width) . nil)))
+        (markdown-display-inline-images))
+      ;; copy overlays to text properties with 'display property (images)
+      (save-excursion
+        (dolist (ol (overlays-in (point-min) (point-max)))
+          (when-let ((display (overlay-get ol 'display)))
+            (add-text-properties (overlay-start ol)
+                                 (overlay-end ol)
+                                 `(display ,display))))))
+
     ;; delete invisible texts
     (let (match)
       (beginning-of-buffer)
