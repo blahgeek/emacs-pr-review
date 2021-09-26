@@ -48,7 +48,9 @@
    (is-resolved :initform nil)))
 
 (defclass pr-review--review-thread-item-section (magit-section)
-  ((keymap :initform pr-review-review-thread-section-map)))  ;; same as above
+  ((keymap :initform pr-review-review-thread-item-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
@@ -261,7 +263,9 @@
     (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
-              (magit-insert-section (pr-review--review-thread-item-section .id)
+              (magit-insert-section item-section (pr-review--review-thread-item-section .id)
+                (oset item-section updatable .viewerCanUpdate)
+                (oset item-section body .body)
                 (magit-insert-heading
                   (propertize (concat "@" .author.login)
                               'face 'pr-review-author-face)

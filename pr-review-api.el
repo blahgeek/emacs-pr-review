@@ -121,6 +121,11 @@
                               `((input . ((pullRequestReviewId . ,review-id)
                                           (body . ,body))))))
 
+(defun pr-review--update-review-comment (review-comment-id body)
+  (pr-review--execute-graphql 'update-review-comment
+                              `((input . ((pullRequestReviewCommentId . ,review-comment-id)
+                                          (body . ,body))))))
+
 (defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
   (pr-review--execute-graphql (if resolve-or-unresolve
                                   'resolve-review-thread

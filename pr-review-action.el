@@ -209,5 +209,19 @@ When called interactively, user will be asked to choose an event."
      (apply-partially 'pr-review--update-review id)
      'refresh-after-exit)))
 
+(defun pr-review-edit-review-comment ()
+  "Edit review comment under current point."
+  (interactive)
+  (when-let* ((section (magit-current-section))
+              (_ (pr-review--review-thread-item-section-p section))
+              (updatable (oref section updatable))
+              (id (oref section value))
+              (body (oref section body)))
+    (pr-review--open-input-buffer
+     "Update review comment."
+     (lambda () (insert body))
+     (apply-partially 'pr-review--update-review-comment id)
+     'refresh-after-exit)))
+
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

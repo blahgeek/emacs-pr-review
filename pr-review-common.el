@@ -108,6 +108,13 @@
     (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
     map))
 
+(defvar pr-review-review-thread-item-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-review-comment)
+    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
+    map))
+
 (defvar pr-review-comment-section-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") #'pr-review-comment)
