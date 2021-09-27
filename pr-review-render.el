@@ -88,7 +88,9 @@
               " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
-      (font-lock-ensure))
+      (condition-case-unless-debug nil
+          (font-lock-ensure)
+        (error nil)))
 
     (when (eq lang-mode 'gfm-mode)
       (let ((markdown-display-remote-images t)
