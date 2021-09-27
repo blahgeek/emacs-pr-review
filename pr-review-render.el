@@ -53,6 +53,7 @@
    (updatable :initform nil)))
 
 (defclass pr-review--root-section (magit-section) ())
+(defclass pr-review--description-section (magit-section) ())
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
@@ -435,7 +436,9 @@
               "\n")
       (pr-review--insert-reviewers-info pr)
       (insert "\n")
-      (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+      (magit-insert-section (pr-review--description-section)
+        (magit-insert-heading "Description")
+        (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
       (insert "\n"))
     (dolist (review-or-comment review-or-comments)
       (pcase (cdr review-or-comment)
@@ -443,8 +446,10 @@
          (pr-review--insert-review-section (car review-or-comment) top-comment-id-to-review-thread))
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
+    (insert "\n")
     (pr-review--insert-check-section
      (let-alist (nth 0 (let-alist pr .commits.nodes)) .commit.statusCheckRollup))
+    (insert "\n")
     (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
