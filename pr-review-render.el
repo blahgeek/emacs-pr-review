@@ -265,9 +265,12 @@
           (when (eq t .isOutdated) " - OUTDATED")))
        'face 'magit-section-secondary-heading))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
-    (let (beg end)
+    (let ((diffhunk-lines (split-string (alist-get 'diffHunk top-comment) "\n"))
+          beg end)
       (setq beg (point))
-      (pr-review--insert-fontified (alist-get 'diffHunk top-comment) 'diff-mode)
+      (while (length> diffhunk-lines 4)   ;; diffHunk may be very long, only keep last 4 lines
+        (setq diffhunk-lines (cdr diffhunk-lines)))
+      (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode)
       (setq end (point))
       (make-button beg end
                    'face nil
