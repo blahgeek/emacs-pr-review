@@ -52,6 +52,8 @@
    (body :initform nil)
    (updatable :initform nil)))
 
+(defclass pr-review--root-section (magit-section) ())
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
@@ -404,7 +406,7 @@
           (let-alist pr .reviewThreads.nodes))
     res))
 
-(defun pr-review--insert-pr (pr diff)
+(defun pr-review--insert-pr-body (pr diff)
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
         (review-or-comments
@@ -414,7 +416,6 @@
     (sort review-or-comments (lambda (a b) (string< (alist-get 'createdAt (car a))
                                                     (alist-get 'createdAt (car b)))))
     (let-alist pr
-      (insert (propertize .title 'face 'pr-review-title-face) "\n\n")
       (insert (propertize .baseRefName 'face 'pr-review-branch-face)
               " <- "
               (propertize .headRefName 'face 'pr-review-branch-face)
@@ -459,6 +460,12 @@
         (insert " ")))
     (mapc 'pr-review--insert-in-diff-review-thread-link
           (let-alist pr .reviewThreads.nodes))))
+
+(defun pr-review--insert-pr (pr diff)
+  (magit-insert-section (pr-review--root-section)
+    (magit-insert-heading (propertize (alist-get 'title pr) 'face 'pr-review-title-face))
+    (insert "\n")
+    (pr-review--insert-pr-body pr diff)))
 
 
 (provide 'pr-review-render)
