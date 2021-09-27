@@ -96,7 +96,7 @@
   :group 'pr-review)
 
 (defface pr-review-button-face
-  '((t :inherit link))
+  '((t :underline t :slant italic))
   "Face used for buttons."
   :group 'pr-review)
 
