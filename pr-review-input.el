@@ -26,6 +26,7 @@
 
 (defvar-local pr-review--input-saved-window-config nil)
 (defvar-local pr-review--input-exit-callback nil)
+(defvar-local pr-review--input-allow-empty nil)
 (defvar-local pr-review--input-refresh-after-exit nil)
 (defvar-local pr-review--input-prev-marker nil)
 
@@ -45,7 +46,8 @@
   (unless pr-review-input-mode (error "Invalid mode"))
   (let ((content (buffer-substring-no-properties (point-min) (point-max))))
     (when (and pr-review--input-exit-callback
-               (not (string-empty-p content)))
+               (or pr-review--input-allow-empty
+                   (not (string-empty-p content))))
       (funcall pr-review--input-exit-callback content)))
   (let ((refresh-after-exit pr-review--input-refresh-after-exit)
         (prev-marker pr-review--input-prev-marker))
@@ -67,7 +69,7 @@
   "Minor mode for PR Review comment input buffer."
   :lighter " PrReviewCommentInput")
 
-(defun pr-review--open-input-buffer (description open-callback exit-callback &optional refresh-after-exit)
+(defun pr-review--open-input-buffer (description open-callback exit-callback &optional refresh-after-exit allow-empty)
   "Open a comment buffer for user input with DESCRIPTION,
 OPEN-CALLBACK is called when the buffer is opened,
 EXIT-CALLBACK is called when the buffer is exit (not abort),
@@ -86,7 +88,8 @@ if REFRESH-AFTER-EXIT is not nil, refresh the current pr-review buffer after exi
        pr-review--input-saved-window-config (current-window-configuration)
        pr-review--input-exit-callback exit-callback
        pr-review--input-refresh-after-exit refresh-after-exit
-       pr-review--input-prev-marker marker)
+       pr-review--input-prev-marker marker
+       pr-review--input-allow-empty allow-empty)
 
       (when open-callback
         (funcall open-callback))

@@ -106,6 +106,8 @@ When a region is active, the review thread is added for multiple lines."
                             (pr-review--get-diff-line-info (region-beginning))))
          region-text
          review-thread)
+    (when (equal line-info start-line-info)
+      (setq start-line-info nil))
     (if (or (null line-info)
             (and start-line-info
                  (not (equal (cadr line-info) (cadr start-line-info)))))
@@ -164,7 +166,7 @@ When a region is active, the review thread is added for multiple lines."
       (pr-review--post-review pr-review--pr-node-id
                               pr-review--head-commit-id
                               event
-                              pr-review--pending-review-threads
+                              (nreverse pr-review--pending-review-threads)
                               body)
       (setq-local pr-review--pending-review-threads nil))))
 
@@ -179,7 +181,8 @@ When called interactively, user will be asked to choose an event."
    nil
    (apply-partially 'pr-review--submit-review-exit-callback
                     (current-buffer) event)
-   'refresh-after-exit))
+   'refresh-after-exit
+   'allow-empty))
 
 (defun pr-review-edit-comment ()
   "Edit comment under current point."
