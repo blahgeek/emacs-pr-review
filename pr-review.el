@@ -40,6 +40,30 @@
     (define-key map (kbd "C-c C-o") #'markdown-follow-link-at-point)
     map))
 
+(defvar-local pr-review--current-show-level 3)
+
+(defun pr-review-increase-show-level ()
+  (interactive)
+  (when (< pr-review--current-show-level 4)
+    (setq pr-review--current-show-level (1+ pr-review--current-show-level)))
+  (magit-section-show-level (- pr-review--current-show-level)))
+
+(defun pr-review-decrease-show-level ()
+  (interactive)
+  (when (> pr-review--current-show-level 1)
+    (setq pr-review--current-show-level (1- pr-review--current-show-level)))
+  (magit-section-show-level (- pr-review--current-show-level)))
+
+(defun pr-review-maximize-show-level ()
+  (interactive)
+  (setq pr-review--current-show-level 4)
+  (magit-section-show-level -4))
+
+(defun pr-review-minimize-show-level ()
+  (interactive)
+  (setq pr-review--current-show-level 1)
+  (magit-section-show-level -1))
+
 (define-derived-mode pr-review-mode magit-section-mode "PrReview"
   :interactive nil
   :group 'pr-review
@@ -48,9 +72,19 @@
               magit-file-section-map pr-review-diff-section-map
               magit-diff-highlight-hunk-body nil)
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
+
   (when (fboundp 'evil-define-key)
     (evil-define-key '(normal motion) 'local
       (kbd "TAB") 'magit-section-toggle
+      (kbd "z a") 'magit-section-toggle
+      (kbd "z o") 'magit-section-show
+      (kbd "z O") 'magit-section-show-children
+      (kbd "z c") 'magit-section-hide
+      (kbd "z C") 'magit-section-hide-children
+      (kbd "z r") 'pr-review-increase-show-level
+      (kbd "z R") 'pr-review-maximize-show-level
+      (kbd "z m") 'pr-review-decrease-show-level
+      (kbd "z M") 'pr-review-minimize-show-level
       [remap evil-previous-line] 'evil-previous-visual-line
       [remap evil-next-line] 'evil-next-visual-line)))
 
