@@ -72,6 +72,15 @@
                :reader 'ghub--decode-payload
                :auth pr-review-ghub-auth-name
                :username pr-review-ghub-username)))
+    ;; magit-diff expects diff with --no-prefix
+    (setq res (replace-regexp-in-string
+               (rx line-start "diff --git a/" (group-n 1 (+? not-newline)) " b/" (backref 1) line-end)
+               "diff --git \\1 \\1"
+               res))
+    (setq res (replace-regexp-in-string
+               (rx line-start (group-n 1 (or "+++" "---")) " " (or "a/" "b/") (group-n 2 (+? not-newline)) line-end)
+               "\\1 \\2"
+               res))
     (concat res "\n")))  ;; don't why, just need an extra new line
 
 (defvar-local pr-review--compare-cache-refs nil)

@@ -147,9 +147,7 @@
       (while (zerop (forward-line))
         (let ((section-data (get-text-property (point) 'magit-section)))
           (when (magit-file-section-p section-data)
-            ;; FIXME
-            (setq filename (replace-regexp-in-string (rx bol (or "a" "b") "/") ""
-                                                     (oref section-data value)))
+            (setq filename (oref section-data value))
             (set-text-properties 0 (length filename) nil filename))
           (when (and (magit-hunk-section-p section-data)
                      (magit-section-position-in-heading-p))
