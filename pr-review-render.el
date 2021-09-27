@@ -195,7 +195,10 @@
                          'pr-review-diff-line-left
                        'pr-review-diff-line-right)
                      (cons filepath line)
-                     t)))
+                     (lambda (target val)  ;; line may be null, in which case, match any line
+                       (and (equal (car target) (car val))
+                            (or (null (cdr target))
+                                (equal (cdr target) (cdr val))))))))
     (goto-char (prop-match-beginning match))
     t))
 
