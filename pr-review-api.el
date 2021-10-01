@@ -45,8 +45,9 @@
     (let-alist res
       (when .errors
         (message "%s" res)
-        (error "Error while making graphql request %s: %s: %s"
-               name .errors.type .errors.message))
+        (let-alist (car .errors)
+          (error "Error while making graphql request %s: %s: %s"
+                 name .type .message)))
       .data)))
 
 (defun pr-review--fetch-pr-info ()
