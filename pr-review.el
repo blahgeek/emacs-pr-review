@@ -124,30 +124,40 @@ if FORCE is nil, ask confirmation when there's pending reviews."
             (yes-or-no-p "Pending review threads exist in current buffer, really refresh? "))
     (pr-review--refresh-internal)))
 
-(defun pr-review-open-parsed (repo-owner repo-name pr-id)
+(defun pr-review-open-parsed (repo-owner repo-name pr-id &optional new-window)
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
     (unless (eq major-mode 'pr-review-mode)
       (pr-review-mode))
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
     (pr-review-refresh)
-    (switch-to-buffer (current-buffer))))
+    (funcall (if new-window
+                 'switch-to-buffer-other-window
+               'switch-to-buffer)
+             (current-buffer))))
 
 ;;;###autoload
-(defun pr-review-open (url)
+(defun pr-review-open-url-match (url)
+  (string-match (rx "http" (? "s") "://github.com/"
+                    (group (+ (not ?/))) "/"
+                    (group (+ (not ?/))) "/pull/"
+                    (group (+ (any digit))))
+                url))
+
+;;;###autoload
+(defun pr-review-open-url (url &optional new-window &rest _)
+  "Open URL (which is a link to github pr) using pr-review.
+Works like `browse-url', can be used in `browse-url-handlers'."
   (interactive "s")
-  (let ((match (string-match (rx "http" (? "s") "://github.com/"
-                                 (group (+ (not ?/))) "/"
-                                 (group (+ (not ?/))) "/pull/"
-                                 (group (+ (any digit))))
-                             url)))
+  (let ((match (pr-review-open-url-match url)))
     (if (not match)
         (message "Cannot parse URL %s" url)
       (pr-review-open-parsed (match-string 1 url)
                              (match-string 2 url)
-                             (string-to-number (match-string 3 url))))))
+                             (string-to-number (match-string 3 url))
+                             new-window))))
 
 ;;;###autoload
-(defun pr-review-open-in-notmuch ()
+(defun pr-review-open-from-notmuch ()
   (interactive)
   (when (and (eq major-mode 'notmuch-show-mode)
              (fboundp 'notmuch-show-get-message-id))
