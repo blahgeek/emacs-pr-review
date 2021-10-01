@@ -26,7 +26,8 @@
 
 (require 'pr-review-common)
 (require 'pr-review-input)
-(require 'pr-review-render)
+(require 'pr-review-api)
+(require 'magit-section)
 
 
 (defun pr-review-reply-to-thread (&rest _)
@@ -42,6 +43,8 @@
                         pr-review--pr-node-id
                         (oref section top-comment-id))
        'refresh-after-exit))))
+
+(declare-function pr-review-refresh "pr-review")
 
 (defun pr-review-resolve-thread (&rest _)
   "Resolve or unresolve current thread."
@@ -87,6 +90,8 @@
         (cons "RIGHT" prop))))))
 
 
+(declare-function pr-review--insert-in-diff-pending-review-thread "pr-review-render")
+
 (defun pr-review--add-pending-review-thread-exit-callback (orig-buffer review-thread body)
   (setf (alist-get 'body review-thread) body)
   (when (buffer-live-p orig-buffer)
@@ -128,7 +133,7 @@ When a region is active, the review thread is added for multiple lines."
        (when region-text
          (lambda ()
            (insert "```suggestion\n" region-text "```")
-           (beginning-of-buffer)))
+           (goto-char (point-min))))
        (apply-partially 'pr-review--add-pending-review-thread-exit-callback
                         (current-buffer)
                         review-thread))
@@ -148,7 +153,7 @@ When a region is active, the review thread is added for multiple lines."
      "Edit review thread."
      (lambda ()
        (insert (alist-get 'body review-thread))
-       (beginning-of-buffer))
+       (goto-char (point-min)))
      (apply-partially 'pr-review--add-pending-review-thread-exit-callback
                       (current-buffer)
                       review-thread))
@@ -188,10 +193,10 @@ When called interactively, user will be asked to choose an event."
   "Edit comment under current point."
   (interactive)
   (when-let* ((section (magit-current-section))
-              (_ (pr-review--comment-section-p section))
+              (-is-comment-section (pr-review--comment-section-p section))
               (updatable (oref section updatable))
               (id (oref section value))
-              (body (oref secton body)))
+              (body (oref section body)))
     (pr-review--open-input-buffer
      "Update comment."
      (lambda () (insert body))
@@ -202,7 +207,7 @@ When called interactively, user will be asked to choose an event."
   "Edit review body under current point."
   (interactive)
   (when-let* ((section (magit-current-section))
-              (_ (pr-review--review-section-p section))
+              (-is-review-section (pr-review--review-section-p section))
               (updatable (oref section updatable))
               (id (oref section value))
               (body (oref section body)))
@@ -216,7 +221,7 @@ When called interactively, user will be asked to choose an event."
   "Edit review comment under current point."
   (interactive)
   (when-let* ((section (magit-current-section))
-              (_ (pr-review--review-thread-item-section-p section))
+              (-is-review-thread-item (pr-review--review-thread-item-section-p section))
               (updatable (oref section updatable))
               (id (oref section value))
               (body (oref section body)))
@@ -238,7 +243,43 @@ When called interactively, user will be asked to choose an event."
                                        (concat "~" (file-name-nondirectory filepath))
                                        content)))
         (with-current-buffer (find-file-other-window tempfile)
-          (goto-line line))))))
+          (goto-char (point-min))
+          (forward-line (1- line)))))))
+
+;; keymaps
+
+(defvar pr-review-review-thread-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
+    map))
+
+(defvar pr-review-review-thread-item-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-review-comment)
+    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
+    map))
+
+(defvar pr-review-comment-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-comment)
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-comment)
+    map))
+
+(defvar pr-review-review-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'pr-review-comment)
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-review)
+    map))
+
+(defvar pr-review-diff-section-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-e") #'pr-review-edit-pending-review-thread)
+    (define-key map (kbd "C-c C-c") #'pr-review-edit-or-add-pending-review-thread)
+    (define-key map (kbd "C-c C-s") #'pr-review-submit-review)
+    (define-key map (kbd "C-c C-v") #'pr-review-view-file)
+    map))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

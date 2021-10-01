@@ -25,35 +25,12 @@
 ;;; Code:
 
 (require 'pr-review-common)
+(require 'pr-review-action)
+(require 'magit-section)
+(require 'magit-diff)
+(require 'markdown-mode)
 
 (defvar-local pr-review--diff-begin-point 0)
-
-;; section classes
-(defclass pr-review--review-section (magit-section)
-  ((keymap :initform pr-review-review-section-map)
-   (body :initform nil)
-   (updatable :initform nil)))
-
-(defclass pr-review--comment-section (magit-section)
-  ((keymap :initform pr-review-comment-section-map)
-   (body :initform nil)
-   (updatable :initform nil)))
-
-(defclass pr-review--diff-section (magit-section) ())
-(defclass pr-review--check-section (magit-section) ())
-
-(defclass pr-review--review-thread-section (magit-section)
-  ((keymap :initform pr-review-review-thread-section-map)
-   (top-comment-id :initform nil)
-   (is-resolved :initform nil)))
-
-(defclass pr-review--review-thread-item-section (magit-section)
-  ((keymap :initform pr-review-review-thread-item-section-map)
-   (body :initform nil)
-   (updatable :initform nil)))
-
-(defclass pr-review--root-section (magit-section) ())
-(defclass pr-review--description-section (magit-section) ())
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
@@ -63,25 +40,7 @@
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
-  ;; Remove 'diff-context face, allow section highlighting in diff
-  ;; but have some wierd effect, because other faces still have different backgrounds
-
-  ;; (let (match)
-  ;;   (while (setq match (text-property-search-forward
-  ;;                       'face 'diff-context
-  ;;                       (lambda (x face-prop)  ;; face-prop may be a list
-  ;;                         (or (eq x face-prop)
-  ;;                             (and (listp face-prop)
-  ;;                                  (memq x face-prop))))))
-  ;;     (let* ((beg (prop-match-beginning match))
-  ;;            (end (prop-match-end match))
-  ;;            (face (get-text-property beg 'face)))
-  ;;       (if (listp face)
-  ;;           (add-text-properties beg end
-  ;;                                `(face ,(delete 'diff-context face)))
-  ;;         (remove-text-properties beg end '(face nil))))))
-
-(defun pr-review--fontify (body lang-mode &optional fill-column)
+(defun pr-review--fontify (body lang-mode &optional fill-col)
   (with-current-buffer
       (get-buffer-create (format " *pr-review-fontification:%s*" lang-mode))
     (let ((inhibit-modification-hooks nil)
@@ -109,7 +68,7 @@
 
     ;; delete invisible texts
     (let (match)
-      (beginning-of-buffer)
+      (goto-char (point-min))
       (while (setq match (text-property-search-forward 'invisible))
         (let ((beg (prop-match-beginning match))
               (end (prop-match-end match)))
@@ -118,22 +77,22 @@
     (when (eq lang-mode 'diff-mode)
       (save-excursion
         (dolist (ol (overlays-in (point-min) (point-max)))
-          (when-let ((_ (eq (overlay-get ol 'diff-mode) 'syntax))
-                     (face (overlay-get ol 'face)))
-            (add-face-text-property (overlay-start ol)
-                                    (overlay-end ol)
-                                    face)))
-        (beginning-of-buffer)
+          (when (eq (overlay-get ol 'diff-mode) 'syntax)
+            (when-let ((face (overlay-get ol 'face)))
+              (add-face-text-property (overlay-start ol)
+                                      (overlay-end ol)
+                                      face))))
+        (goto-char (point-min))
         (remove-overlays (point-min) (point-max) 'diff-mode 'syntax)))
 
-    (when fill-column
+    (when fill-col
       (fill-region (point-min) (point-max)))
 
     (buffer-string)))
 
 
-(defun pr-review--insert-fontified (body lang-mode &optional fill-column)
-  (insert (pr-review--fontify body lang-mode fill-column)))
+(defun pr-review--insert-fontified (body lang-mode &optional fill-col)
+  (insert (pr-review--fontify body lang-mode fill-col)))
 
 
 (defun pr-review--insert-diff (diff)
@@ -178,7 +137,7 @@
 (defun pr-review--find-section-with-value (value)
   "Find and return the magit-section object matching VALUE."
   (save-excursion
-    (beginning-of-buffer)
+    (goto-char (point-min))
     (when-let ((match (text-property-search-forward
                        'magit-section value
                        (lambda (target prop-value)
@@ -191,7 +150,8 @@
     (goto-char (oref section start))))
 
 (defun pr-review--goto-diff-line (filepath diffside line)
-  "Goto diff line for FILEPATH, DIFFSIDE (string, left or right) and LINE, return t on success."
+  "Goto diff line for FILEPATH, DIFFSIDE (string, left or right) and LINE,
+return t on success."
   (goto-char pr-review--diff-begin-point)
   (when-let ((match (text-property-search-forward
                      (if (equal diffside "LEFT")
@@ -303,8 +263,7 @@
                    'face 'pr-review-button-face
                    'action 'pr-review-reply-to-thread)
     (insert "  ")
-    (let ((resolved (eq t (alist-get 'isResolved review-thread)))
-          (thread-id (alist-get 'id review-thread)))
+    (let ((resolved (eq t (alist-get 'isResolved review-thread))))
       (insert-button (if resolved "Unresolve" "Resolve")
                      'face 'pr-review-button-face
                      'action 'pr-review-resolve-thread))

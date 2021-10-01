@@ -24,11 +24,23 @@
 
 ;;; Code:
 
+(require 'markdown-mode)
+
 (defvar-local pr-review--input-saved-window-config nil)
 (defvar-local pr-review--input-exit-callback nil)
 (defvar-local pr-review--input-allow-empty nil)
 (defvar-local pr-review--input-refresh-after-exit nil)
 (defvar-local pr-review--input-prev-marker nil)
+
+(defvar pr-review-input-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c\C-c" 'pr-review-input-exit)
+    (define-key map "\C-c\C-k" 'pr-review-input-abort)
+    map))
+
+(define-minor-mode pr-review-input-mode
+  "Minor mode for PR Review comment input buffer."
+  :lighter " PrReviewCommentInput")
 
 (defun pr-review-input-abort ()
   "Abort current comment input buffer, discard content."
@@ -40,6 +52,7 @@
       (unwind-protect
           (set-window-configuration saved-window-config)))))
 
+(declare-function pr-review-refresh "pr-review")
 (defun pr-review-input-exit ()
   "Apply content and exit current comment input buffer."
   (interactive)
@@ -59,22 +72,13 @@
         (pr-review-refresh)
         (goto-char prev-pos)))))
 
-(defvar pr-review-input-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map "\C-c\C-c" 'pr-review-input-exit)
-    (define-key map "\C-c\C-k" 'pr-review-input-abort)
-    map))
-
-(define-minor-mode pr-review-input-mode
-  "Minor mode for PR Review comment input buffer."
-  :lighter " PrReviewCommentInput")
-
 (defun pr-review--open-input-buffer (description open-callback exit-callback &optional refresh-after-exit allow-empty)
   "Open a comment buffer for user input with DESCRIPTION,
 OPEN-CALLBACK is called when the buffer is opened,
 EXIT-CALLBACK is called when the buffer is exit (not abort),
 both callbacks are called inside the comment buffer,
-if REFRESH-AFTER-EXIT is not nil, refresh the current pr-review buffer after exit."
+if REFRESH-AFTER-EXIT is not nil,
+refresh the current pr-review buffer after exit."
   (let ((marker (point-marker)))
     (with-current-buffer (generate-new-buffer "*pr-review comment input*")
       (gfm-mode)

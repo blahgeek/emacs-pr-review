@@ -1,9 +1,12 @@
-;;; pr-review.el --- Review github PR in emacs.    -*- lexical-binding: t; -*-
+;;; pr-review.el --- Review github PR    -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2021  Yikai Zhao
 
 ;; Author: Yikai Zhao <yikai@z1k.dev>
 ;; Keywords: tools
+;; Version: 0.1
+;; URL: https://github.com/blahgeek/emacs-pr-review
+;; Package-Requires: ((emacs "27.1") (magit-section "3.2") (magit "3.2") (markdown-mode "2.5") (ghub "3.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -20,6 +23,8 @@
 
 ;;; Commentary:
 
+;; Review github PR in emacs.
+
 ;;; Code:
 
 (require 'pr-review-common)
@@ -27,7 +32,7 @@
 (require 'pr-review-input)
 (require 'pr-review-render)
 (require 'pr-review-action)
-
+(require 'markdown-mode)
 
 (defun pr-review--confirm-kill-buffer ()
   (or (null pr-review--pending-review-threads)
@@ -107,11 +112,12 @@
       (pr-review--insert-pr pr-info pr-diff))
     (if section-id
         (pr-review--goto-section-with-value section-id)
-      (beginning-of-buffer))
+      (goto-char (point-min)))
     (apply 'message "PR %s/%s/%s loaded" pr-review--pr-path)))
 
 (defun pr-review-refresh (&optional force)
-  "Fetch and reload current PrReview buffer, if FORCE is nil, ask confirmation when there's pending reviews."
+  "Fetch and reload current PrReview buffer,
+if FORCE is nil, ask confirmation when there's pending reviews."
   (interactive)
   (when (or (null pr-review--pending-review-threads)
             force
@@ -126,7 +132,7 @@
     (pr-review-refresh)
     (switch-to-buffer (current-buffer))))
 
-
+;;;###autoload
 (defun pr-review-open (url)
   (interactive "s")
   (let ((match (string-match (rx "http" (? "s") "://github.com/"
@@ -140,9 +146,11 @@
                              (match-string 2 url)
                              (string-to-number (match-string 3 url))))))
 
+;;;###autoload
 (defun pr-review-open-in-notmuch ()
   (interactive)
-  (when (eq major-mode 'notmuch-show-mode)
+  (when (and (eq major-mode 'notmuch-show-mode)
+             (fboundp 'notmuch-show-get-message-id))
     (when-let* ((msg-id (notmuch-show-get-message-id 'bare))
                 (match (string-match (rx bol
                                          (group-n 1 (+ (not ?/))) "/"
@@ -151,9 +159,9 @@
                                          (* not-newline)
                                          "@github.com" eol)
                                      msg-id)))
-      (pr-review-open-parsed (match-string 1 url)
-                             (match-string 2 url)
-                             (string-to-number (match-string 3 url))))))
+      (pr-review-open-parsed (match-string 1 msg-id)
+                             (match-string 2 msg-id)
+                             (string-to-number (match-string 3 msg-id))))))
 
 
 (provide 'pr-review)

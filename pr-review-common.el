@@ -24,11 +24,10 @@
 
 ;;; Code:
 
-(require 'subr-x)
 (require 'magit-section)
-(require 'magit-diff)
 
-(defgroup pr-review nil "Pr review.")
+(defgroup pr-review nil "Pr review."
+  :group 'tools)
 
 (defface pr-review-title-face
   '((t :inherit outline-1))
@@ -100,40 +99,33 @@
   "Face used for buttons."
   :group 'pr-review)
 
-;; keymaps
 
-(defvar pr-review-review-thread-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
-    map))
+;; section classes
+(defclass pr-review--review-section (magit-section)
+  ((keymap :initform 'pr-review-review-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
 
-(defvar pr-review-review-thread-item-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-review-comment)
-    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
-    map))
+(defclass pr-review--comment-section (magit-section)
+  ((keymap :initform 'pr-review-comment-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
 
-(defvar pr-review-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-comment)
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-comment)
-    map))
+(defclass pr-review--diff-section (magit-section) ())
+(defclass pr-review--check-section (magit-section) ())
 
-(defvar pr-review-review-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-comment)
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-review)
-    map))
+(defclass pr-review--review-thread-section (magit-section)
+  ((keymap :initform 'pr-review-review-thread-section-map)
+   (top-comment-id :initform nil)
+   (is-resolved :initform nil)))
 
-(defvar pr-review-diff-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-pending-review-thread)
-    (define-key map (kbd "C-c C-c") #'pr-review-edit-or-add-pending-review-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-submit-review)
-    (define-key map (kbd "C-c C-v") #'pr-review-view-file)
-    map))
+(defclass pr-review--review-thread-item-section (magit-section)
+  ((keymap :initform 'pr-review-review-thread-item-section-map)
+   (body :initform nil)
+   (updatable :initform nil)))
+
+(defclass pr-review--root-section (magit-section) ())
+(defclass pr-review--description-section (magit-section) ())
 
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
 (defvar-local pr-review--pr-node-id nil)

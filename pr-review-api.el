@@ -24,17 +24,27 @@
 
 ;;; Code:
 
+(require 'pr-review-common)
 (require 'ghub)
 
-(defvar pr-review-ghub-auth-name 'emacs-pr-review)
-(defvar pr-review-ghub-username nil)
-(defvar pr-review-bin-dir (file-name-directory load-file-name))
+(defcustom pr-review-ghub-auth-name 'emacs-pr-review
+  "Ghub auth name used by pr-review, see `ghub-request' for details."
+  :type 'symbol
+  :group 'pr-review)
+
+(defcustom pr-review-ghub-username nil
+  "Ghub username used by pr-review, see `ghub-request' for details."
+  :type '(choice (const :tag "Read from config" nil)
+                 (string :tag "Username value"))
+  :group 'pr-review)
+
+(defvar pr-review--bin-dir (file-name-directory load-file-name))
 
 (defun pr-review--get-graphql (name)
   "Get graphql content for NAME (symbol), cached."
   (with-temp-buffer
     (insert-file-contents-literally
-     (concat pr-review-bin-dir "graphql/" (symbol-name name) ".graphql"))
+     (concat pr-review--bin-dir "graphql/" (symbol-name name) ".graphql"))
     (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun pr-review--execute-graphql (name variables)
