@@ -140,6 +140,20 @@
                              (match-string 2 url)
                              (string-to-number (match-string 3 url))))))
 
+(defun pr-review-open-in-notmuch ()
+  (interactive)
+  (when (eq major-mode 'notmuch-show-mode)
+    (when-let* ((msg-id (notmuch-show-get-message-id 'bare))
+                (match (string-match (rx bol
+                                         (group-n 1 (+ (not ?/))) "/"
+                                         (group-n 2 (+ (not ?/))) "/pull/"
+                                         (group-n 3 (+ (any digit)))
+                                         (* not-newline)
+                                         "@github.com" eol)
+                                     msg-id)))
+      (pr-review-open-parsed (match-string 1 url)
+                             (match-string 2 url)
+                             (string-to-number (match-string 3 url))))))
 
 
 (provide 'pr-review)
