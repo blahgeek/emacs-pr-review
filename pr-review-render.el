@@ -279,7 +279,9 @@ return t on success."
                                 (list cmt review-thread)))
                             review-comments))))
     (let-alist review
-      (when (or top-comment-and-review-thread-list (not (string-empty-p .body)))
+      (when (or top-comment-and-review-thread-list
+                (not (equal .state "COMMENTED"))
+                (not (string-empty-p .body)))
         (magit-insert-section section (pr-review--review-section .id)
           (oset section updatable .viewerCanUpdate)
           (oset section body .body)
