@@ -178,7 +178,7 @@ Used by the default value of `pr-review'."
        (error "Cannot parse url %s" input-url))
      res)
    ;; new-window
-   (list (null current-prefix-arg))))
+   (list current-prefix-arg)))
 
 
 ;;;###autoload
