@@ -412,8 +412,8 @@ return t on success."
     (when-let ((status-check-rollup (let-alist
                                         (nth 0 (let-alist pr .commits.nodes))
                                       .commit.statusCheckRollup)))
-      (pr-review--insert-check-section status-check-rollup))
-    (insert "\n")
+      (pr-review--insert-check-section status-check-rollup)
+      (insert "\n"))
     (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
