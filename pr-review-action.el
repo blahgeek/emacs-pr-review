@@ -279,10 +279,8 @@ Based on current context, may be: resolve thread, submit review."
   (pcase (magit-current-section)
     ((pred pr-review--review-thread-context-p)
      (pr-review-resolve-thread))
-    ((pred pr-review--diff-context-p)
-     (pr-review-submit-review))
     (_
-     (message "No action available in current context"))))
+     (call-interactively #'pr-review-submit-review))))
 
 
 (defun pr-review-context-edit ()
