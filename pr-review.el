@@ -124,7 +124,66 @@ if FORCE is nil, ask confirmation when there's pending reviews."
             (yes-or-no-p "Pending review threads exist in current buffer, really refresh? "))
     (pr-review--refresh-internal)))
 
-(defun pr-review-open-parsed (repo-owner repo-name pr-id &optional new-window)
+;;;###autoload
+(defun pr-review-url-parse (url)
+  "Return pr path (repo-owner repo-name pr-id) for URL, or nil on error."
+  (when (string-match (rx "http" (? "s") "://github.com/"
+                          (group (+ (not ?/))) "/"
+                          (group (+ (not ?/))) "/pull/"
+                          (group (+ (any digit))))
+                      url)
+    (list (match-string 1 url)
+          (match-string 2 url)
+          (string-to-number (match-string 3 url)))))
+
+(defun pr-review--pr-path-at-point ()
+  "Return pr path (repo-owner repo-name pr-id) based on current point, or nil.
+Used by the default value of `pr-review'."
+  (or
+   ;; url at point
+   (when-let* ((url (thing-at-point 'url t))
+               (res (pr-review-url-parse url)))
+     res)
+   ;; notmuch message ID
+   (when (and (eq major-mode 'notmuch-show-mode)
+              (fboundp 'notmuch-show-get-message-id))
+     (when-let* ((msg-id (notmuch-show-get-message-id 'bare))
+                 (match (string-match (rx bol
+                                          (group-n 1 (+ (not ?/))) "/"
+                                          (group-n 2 (+ (not ?/))) "/pull/"
+                                          (group-n 3 (+ (any digit)))
+                                          (* not-newline)
+                                          "@github.com" eol)
+                                      msg-id)))
+       (list (match-string 1 msg-id)
+             (match-string 2 msg-id)
+             (string-to-number (match-string 3 msg-id)))))))
+
+(defun pr-review--interactive-arg ()
+  "Return args for interactive call for `pr-review'."
+  (append
+   (let* ((default-pr-path (pr-review--pr-path-at-point))
+          (input-url (read-string (concat "URL to review"
+                                          (when default-pr-path
+                                            (apply 'format " (default: %s/%s/%s)"
+                                                   default-pr-path))
+                                          ":")))
+          (res (or (pr-review-url-parse input-url)
+                   default-pr-path)))
+     (unless res
+       (error "Cannot parse url %s" input-url))
+     res)
+   ;; new-window
+   (list (null current-prefix-arg))))
+
+
+;;;###autoload
+(defun pr-review (repo-owner repo-name pr-id &optional new-window)
+  "Open pr-review for REPO-OWNER/REPO-NAME PR-ID (number).
+Open in current window if NEW-WINDOW is nil, in other window otherwise.
+When called interactively, user will be prompted to enter a PR url
+and new window will be used when called with prefix."
+  (interactive (pr-review--interactive-arg))
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
     (unless (eq major-mode 'pr-review-mode)
       (pr-review-mode))
@@ -135,43 +194,15 @@ if FORCE is nil, ask confirmation when there's pending reviews."
                'switch-to-buffer)
              (current-buffer))))
 
-;;;###autoload
-(defun pr-review-open-url-match (url)
-  (string-match (rx "http" (? "s") "://github.com/"
-                    (group (+ (not ?/))) "/"
-                    (group (+ (not ?/))) "/pull/"
-                    (group (+ (any digit))))
-                url))
 
 ;;;###autoload
 (defun pr-review-open-url (url &optional new-window &rest _)
   "Open URL (which is a link to github pr) using pr-review.
-Works like `browse-url', can be used in `browse-url-handlers'."
-  (interactive "s")
-  (let ((match (pr-review-open-url-match url)))
-    (if (not match)
+Works like `pr-review' but accepts URL, can be used in `browse-url-handlers'."
+  (let ((res (pr-review-url-parse url)))
+    (if (not res)
         (message "Cannot parse URL %s" url)
-      (pr-review-open-parsed (match-string 1 url)
-                             (match-string 2 url)
-                             (string-to-number (match-string 3 url))
-                             new-window))))
-
-;;;###autoload
-(defun pr-review-open-from-notmuch ()
-  (interactive)
-  (when (and (eq major-mode 'notmuch-show-mode)
-             (fboundp 'notmuch-show-get-message-id))
-    (when-let* ((msg-id (notmuch-show-get-message-id 'bare))
-                (match (string-match (rx bol
-                                         (group-n 1 (+ (not ?/))) "/"
-                                         (group-n 2 (+ (not ?/))) "/pull/"
-                                         (group-n 3 (+ (any digit)))
-                                         (* not-newline)
-                                         "@github.com" eol)
-                                     msg-id)))
-      (pr-review-open-parsed (match-string 1 msg-id)
-                             (match-string 2 msg-id)
-                             (string-to-number (match-string 3 msg-id))))))
+      (apply 'pr-review (append res (list new-window))))))
 
 
 (provide 'pr-review)
