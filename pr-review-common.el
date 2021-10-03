@@ -102,26 +102,22 @@
 
 ;; section classes
 (defclass pr-review--review-section (magit-section)
-  ((keymap :initform 'pr-review-review-section-map)
-   (body :initform nil)
+  ((body :initform nil)
    (updatable :initform nil)))
 
 (defclass pr-review--comment-section (magit-section)
-  ((keymap :initform 'pr-review-comment-section-map)
-   (body :initform nil)
+  ((body :initform nil)
    (updatable :initform nil)))
 
 (defclass pr-review--diff-section (magit-section) ())
 (defclass pr-review--check-section (magit-section) ())
 
 (defclass pr-review--review-thread-section (magit-section)
-  ((keymap :initform 'pr-review-review-thread-section-map)
-   (top-comment-id :initform nil)
+  ((top-comment-id :initform nil)
    (is-resolved :initform nil)))
 
 (defclass pr-review--review-thread-item-section (magit-section)
-  ((keymap :initform 'pr-review-review-thread-item-section-map)
-   (body :initform nil)
+  ((body :initform nil)
    (updatable :initform nil)))
 
 (defclass pr-review--root-section (magit-section) ())

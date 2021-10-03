@@ -182,11 +182,12 @@ return t on success."
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
-        (add-text-properties beg end `(
-                                       pr-review-pending-review-thread ,pending-review-thread
-                                       pr-review-pending-review-beg ,beg
-                                       pr-review-pending-review-end ,end
-                                       keymap ,pr-review-diff-section-map))))))
+        (add-text-properties
+         beg end
+         (list
+          'pr-review-pending-review-thread pending-review-thread
+          'pr-review-pending-review-beg beg
+          'pr-review-pending-review-end end))))))
 
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."

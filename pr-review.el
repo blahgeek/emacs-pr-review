@@ -41,8 +41,12 @@
 (defvar pr-review-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
-    (define-key map (kbd "C-c C-r") #'pr-review-refresh)
     (define-key map (kbd "C-c C-o") #'markdown-follow-link-at-point)
+    (define-key map (kbd "C-c C-r") #'pr-review-refresh)
+    (define-key map (kbd "C-c C-c") #'pr-review-context-comment)
+    (define-key map (kbd "C-c C-s") #'pr-review-context-action)
+    (define-key map (kbd "C-c C-e") #'pr-review-context-edit)
+    (define-key map (kbd "C-c C-v") #'pr-review-view-file)
     map))
 
 (defvar-local pr-review--current-show-level 3)
@@ -73,8 +77,8 @@
   :interactive nil
   :group 'pr-review
   (use-local-map pr-review-mode-map)
-  (setq-local magit-hunk-section-map pr-review-diff-section-map
-              magit-file-section-map pr-review-diff-section-map
+  (setq-local magit-hunk-section-map nil
+              magit-file-section-map nil
               magit-diff-highlight-hunk-body nil)
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
 

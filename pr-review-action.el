@@ -246,40 +246,60 @@ When called interactively, user will be asked to choose an event."
           (goto-char (point-min))
           (forward-line (1- line)))))))
 
-;; keymaps
+;; general dispatching functions, call other functions based on current context
 
-(defvar pr-review-review-thread-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
-    map))
+(defun pr-review--review-thread-context-p (section)
+  (or (pr-review--review-thread-section-p section)
+      (pr-review--review-thread-item-section-p section)))
 
-(defvar pr-review-review-thread-item-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-review-comment)
-    (define-key map (kbd "C-c C-c") #'pr-review-reply-to-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-resolve-thread)
-    map))
+(defun pr-review--diff-context-p (section)
+  (or (pr-review--diff-section-p section)
+      (magit-hunk-section-p section)
+      (magit-file-section-p section)
+      (magit-module-section-p section)
+      (get-text-property (point) 'pr-review-pending-review-thread)))
 
-(defvar pr-review-comment-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-comment)
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-comment)
-    map))
+(defun pr-review-context-comment ()
+  "Comment on current point.
+Based on current context, may be: reply to thread, post comment, add/edit review on diff."
+  (interactive)
+  (pcase (magit-current-section)
+    ((pred pr-review--review-thread-context-p)
+     (pr-review-reply-to-thread))
+    ((pred pr-review--diff-context-p)
+     (pr-review-edit-or-add-pending-review-thread))
+    (_
+     (pr-review-comment))))
 
-(defvar pr-review-review-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'pr-review-comment)
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-review)
-    map))
 
-(defvar pr-review-diff-section-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-e") #'pr-review-edit-pending-review-thread)
-    (define-key map (kbd "C-c C-c") #'pr-review-edit-or-add-pending-review-thread)
-    (define-key map (kbd "C-c C-s") #'pr-review-submit-review)
-    (define-key map (kbd "C-c C-v") #'pr-review-view-file)
-    map))
+(defun pr-review-context-action ()
+  "Action on current point.
+Based on current context, may be: resolve thread, submit review."
+  (interactive)
+  (pcase (magit-current-section)
+    ((pred pr-review--review-thread-context-p)
+     (pr-review-resolve-thread))
+    ((pred pr-review--diff-context-p)
+     (pr-review-submit-review))
+    (_
+     (message "No action available in current context"))))
+
+
+(defun pr-review-context-edit ()
+  "Edit on current point.
+Based on current context, may be: edit review comment, edit comment, edit pending diff review."
+  (interactive)
+  (pcase (magit-current-section)
+    ((pred pr-review--review-thread-item-section-p)
+     (pr-review-edit-review-comment))
+    ((pred pr-review--comment-section-p)
+     (pr-review-edit-comment))
+    ((pred pr-review--review-section-p)
+     (pr-review-edit-review))
+    ((pred pr-review--diff-context-p)
+     (pr-review-edit-pending-review-thread))
+    (_
+     (message "No action available in current context"))))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
