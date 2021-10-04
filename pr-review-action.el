@@ -28,6 +28,7 @@
 (require 'pr-review-input)
 (require 'pr-review-api)
 (require 'magit-section)
+(require 'magit-diff)
 
 
 (defun pr-review-reply-to-thread (&rest _)
@@ -261,7 +262,8 @@ When called interactively, user will be asked to choose an event."
 
 (defun pr-review-context-comment ()
   "Comment on current point.
-Based on current context, may be: reply to thread, post comment, add/edit review on diff."
+Based on current context, may be:
+reply to thread, post comment, add/edit review on diff."
   (interactive)
   (pcase (magit-current-section)
     ((pred pr-review--review-thread-context-p)
@@ -285,7 +287,8 @@ Based on current context, may be: resolve thread, submit review."
 
 (defun pr-review-context-edit ()
   "Edit on current point.
-Based on current context, may be: edit review comment, edit comment, edit pending diff review."
+Based on current context, may be:
+edit review comment, edit comment, edit pending diff review."
   (interactive)
   (pcase (magit-current-section)
     ((pred pr-review--review-thread-item-section-p)
