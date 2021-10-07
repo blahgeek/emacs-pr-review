@@ -48,6 +48,7 @@
     (define-key map (kbd "C-c C-e") #'pr-review-context-edit)
     (define-key map (kbd "C-c C-v") #'pr-review-view-file)
     (define-key map (kbd "C-c C-f") #'pr-review-goto-file)
+    (define-key map (kbd "C-c C-o") #'pr-review-open-in-default-browser)
     map))
 
 (with-eval-after-load 'evil
@@ -71,6 +72,7 @@
       (kbd "C-k") #'magit-section-backward
       (kbd "g k") #'magit-section-backward-sibling
       (kbd "g f") #'pr-review-goto-file
+      (kbd "g o") #'pr-review-open-in-default-browser
       [remap evil-previous-line] 'evil-previous-visual-line
       [remap evil-next-line] 'evil-next-visual-line)))
 

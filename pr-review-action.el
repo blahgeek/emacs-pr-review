@@ -29,6 +29,7 @@
 (require 'pr-review-api)
 (require 'magit-section)
 (require 'magit-diff)
+(require 'browse-url)
 
 
 (defun pr-review-reply-to-thread (&rest _)
@@ -272,6 +273,12 @@ When called interactively, user will be asked to choose an event."
         (with-current-buffer (find-file-other-window tempfile)
           (goto-char (point-min))
           (forward-line (1- line)))))))
+
+(defun pr-review-open-in-default-browser ()
+  "Open current PR in default browser."
+  (interactive)
+  (browse-url-default-browser (apply 'format "https://github.com/%s/%s/pull/%s"
+                                     pr-review--pr-path)))
 
 ;; general dispatching functions, call other functions based on current context
 
