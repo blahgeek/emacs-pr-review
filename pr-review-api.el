@@ -158,9 +158,14 @@
                                           (body . ,body))))))
 
 (defun pr-review--update-pr-body (pr-node-id body)
-  (pr-review--execute-graphql 'update-pr-body
+  (pr-review--execute-graphql 'update-pr
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (body . ,body))))))
+
+(defun pr-review--update-pr-title (pr-node-id title)
+  (pr-review--execute-graphql 'update-pr
+                              `((input . ((pullRequestId . ,pr-node-id)
+                                          (title . ,title))))))
 
 (defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
   (pr-review--execute-graphql (if resolve-or-unresolve

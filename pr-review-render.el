@@ -485,8 +485,12 @@ return t on success."
           (let-alist pr .reviewThreads.nodes))))
 
 (defun pr-review--insert-pr (pr diff)
-  (magit-insert-section (pr-review--root-section)
-    (magit-insert-heading (propertize (alist-get 'title pr) 'face 'pr-review-title-face))
+  (magit-insert-section section (pr-review--root-section)
+    (let-alist pr
+      (oset section title .title)
+      (oset section updatable .viewerCanUpdate)
+      (magit-insert-heading
+        (propertize (alist-get 'title pr)'face 'pr-review-title-face)))
     (insert "\n")
     (pr-review--insert-pr-body pr diff)))
 

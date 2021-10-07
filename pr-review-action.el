@@ -245,6 +245,19 @@ When called interactively, user will be asked to choose an event."
      (apply-partially 'pr-review--update-pr-body pr-review--pr-node-id)
      'refresh-after-exit)))
 
+(defun pr-review-edit-pr-title ()
+  "Edit pr title."
+  (interactive)
+  (when-let* ((section (magit-current-section))
+              (-is-root-section (pr-review--root-section-p section))
+              (updatable (oref section updatable))
+              (title (oref section title)))
+    (pr-review--open-input-buffer
+     "Update PR title."
+     (lambda () (insert title))
+     (apply-partially 'pr-review--update-pr-title pr-review--pr-node-id)
+     'refresh-after-exit)))
+
 (defun pr-review-view-file ()
   "View the full file under current point (must in some diff)."
   (interactive)
@@ -314,6 +327,8 @@ edit description, edit review comment, edit comment, edit pending diff review."
      (pr-review-edit-review))
     ((pred pr-review--diff-context-p)
      (pr-review-edit-pending-review-thread))
+    ((pred pr-review--root-section-p)
+     (pr-review-edit-pr-title))
     (_
      (message "No action available in current context"))))
 

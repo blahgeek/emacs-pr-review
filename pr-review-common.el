@@ -135,7 +135,10 @@
   ((body :initform nil)
    (updatable :initform nil)))
 
-(defclass pr-review--root-section (magit-section) ())
+(defclass pr-review--root-section (magit-section)
+  ((title :initform nil)
+   (updatable :initform nil)))
+
 (defclass pr-review--description-section (magit-section)
   ((body :initform nil)
    (updatable :initform nil)))
