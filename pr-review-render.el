@@ -51,7 +51,7 @@
                ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED"))
                 'pr-review-error-state-face)
                ((member str '("RESOLVED" "OUTDATED"))
-                'pr-review-unimportant-state-face)
+                'pr-review-info-state-face)
                (t
                 'pr-review-state-face))))
 
@@ -267,9 +267,9 @@ return t on success."
                               (format ":%s" .line))))
          'face 'magit-section-secondary-heading)
         (when (eq t .isResolved)
-          (concat " - " (propertize "RESOLVED" 'face 'pr-review-unimportant-state-face)))
+          (concat " - " (propertize "RESOLVED" 'face 'pr-review-info-state-face)))
         (when (eq t .isOutdated)
-          (concat " - " (propertize "OUTDATED" 'face 'pr-review-unimportant-state-face)))))
+          (concat " - " (propertize "OUTDATED" 'face 'pr-review-info-state-face)))))
     (insert
      (make-string pr-review-section-indent-width ?\s)
      (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
