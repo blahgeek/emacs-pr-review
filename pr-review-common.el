@@ -136,7 +136,9 @@
    (updatable :initform nil)))
 
 (defclass pr-review--root-section (magit-section) ())
-(defclass pr-review--description-section (magit-section) ())
+(defclass pr-review--description-section (magit-section)
+  ((body :initform nil)
+   (updatable :initform nil)))
 
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
 (defvar-local pr-review--pr-node-id nil)

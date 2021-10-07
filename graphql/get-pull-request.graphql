@@ -19,6 +19,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       author {
         login
       }
+      viewerCanUpdate
 
       labels(first: 100) {
         nodes {

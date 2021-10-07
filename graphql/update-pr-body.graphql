@@ -1,0 +1,7 @@
+mutation($input: UpdatePullRequestInput!) {
+  updatePullRequest(input: $input) {
+    pullRequest {
+      id
+    }
+  }
+}
