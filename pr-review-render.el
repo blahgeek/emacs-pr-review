@@ -417,8 +417,8 @@ return t on success."
            (g (string-to-number (match-string 2 background-hex) 16))
            (b (string-to-number (match-string 3 background-hex) 16)))
       (if (> (+ r g b) 384)
-          "#ffffff"
-        "#000000"))))
+          "#000000"
+        "#ffffff"))))
 
 (defun pr-review--insert-pr-body (pr diff)
   (let ((top-comment-id-to-review-thread
