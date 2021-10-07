@@ -51,27 +51,28 @@
     map))
 
 (with-eval-after-load 'evil
-  (evil-define-key* '(normal motion) pr-review-mode-map
-    (kbd "g l") #'markdown-follow-link-at-point
-    (kbd "g r") #'pr-review-refresh
-    (kbd "TAB") #'magit-section-toggle
-    (kbd "z a") #'magit-section-toggle
-    (kbd "z o") #'magit-section-show
-    (kbd "z O") #'magit-section-show-children
-    (kbd "z c") #'magit-section-hide
-    (kbd "z C") #'magit-section-hide-children
-    (kbd "z r") #'pr-review-increase-show-level
-    (kbd "z R") #'pr-review-maximize-show-level
-    (kbd "z m") #'pr-review-decrease-show-level
-    (kbd "z M") #'pr-review-minimize-show-level
-    (kbd "g h") #'magit-section-up
-    (kbd "C-j") #'magit-section-forward
-    (kbd "g j") #'magit-section-forward-sibling
-    (kbd "C-k") #'magit-section-backward
-    (kbd "g k") #'magit-section-backward-sibling
-    (kbd "g f") #'pr-review-goto-file
-    [remap evil-previous-line] 'evil-previous-visual-line
-    [remap evil-next-line] 'evil-next-visual-line))
+  (when (fboundp 'evil-define-key*)
+    (evil-define-key* '(normal motion) pr-review-mode-map
+      (kbd "g l") #'markdown-follow-link-at-point
+      (kbd "g r") #'pr-review-refresh
+      (kbd "TAB") #'magit-section-toggle
+      (kbd "z a") #'magit-section-toggle
+      (kbd "z o") #'magit-section-show
+      (kbd "z O") #'magit-section-show-children
+      (kbd "z c") #'magit-section-hide
+      (kbd "z C") #'magit-section-hide-children
+      (kbd "z r") #'pr-review-increase-show-level
+      (kbd "z R") #'pr-review-maximize-show-level
+      (kbd "z m") #'pr-review-decrease-show-level
+      (kbd "z M") #'pr-review-minimize-show-level
+      (kbd "g h") #'magit-section-up
+      (kbd "C-j") #'magit-section-forward
+      (kbd "g j") #'magit-section-forward-sibling
+      (kbd "C-k") #'magit-section-backward
+      (kbd "g k") #'magit-section-backward-sibling
+      (kbd "g f") #'pr-review-goto-file
+      [remap evil-previous-line] 'evil-previous-visual-line
+      [remap evil-next-line] 'evil-next-visual-line)))
 
 (defvar-local pr-review--current-show-level 3)
 
