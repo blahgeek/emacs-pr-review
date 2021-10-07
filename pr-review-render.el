@@ -369,6 +369,20 @@ return t on success."
           (let-alist pr .reviewThreads.nodes))
     res))
 
+(defun pr-review--get-label-foreground (background-hex)
+  (when (string-match (rx bol
+                          (group (= 2 (any xdigit)))
+                          (group (= 2 (any xdigit)))
+                          (group (= 2 (any xdigit)))
+                          eol)
+                      background-hex)
+    (let* ((r (string-to-number (match-string 1 background-hex) 16))
+           (g (string-to-number (match-string 2 background-hex) 16))
+           (b (string-to-number (match-string 3 background-hex) 16)))
+      (if (> (+ r g b) 384)
+          "#ffffff"
+        "#000000"))))
+
 (defun pr-review--insert-pr-body (pr diff)
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
@@ -387,6 +401,7 @@ return t on success."
                            (propertize (alist-get 'name label)
                                        'face
                                        `(:background ,(concat "#" (alist-get 'color label))
+                                         :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
                                          :inherit pr-review-label-face)))
                          .labels.nodes " ")
               "\n")
