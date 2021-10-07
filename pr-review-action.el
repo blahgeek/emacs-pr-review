@@ -302,5 +302,25 @@ edit review comment, edit comment, edit pending diff review."
     (_
      (message "No action available in current context"))))
 
+
+(defun pr-review--find-all-file-sections (section)
+  "Recursively find all file sections in SECTION."
+  (if (magit-file-section-p section)
+      (list section)
+    (mapcan #'pr-review--find-all-file-sections
+            (oref section children))))
+
+(defun pr-review-goto-file (filepath)
+  "Goto section for FILEPATH in current buffer.
+When called interactively, user can select filepath from list."
+  (interactive (list (completing-read
+                      "Goto file:"
+                      (mapcar (lambda (section) (oref section value))
+                              (pr-review--find-all-file-sections magit-root-section))
+                      nil 'require-match)))
+  (when-let ((section (seq-find (lambda (section) (equal (oref section value) filepath))
+                                (pr-review--find-all-file-sections magit-root-section))))
+    (goto-char (oref section start))))
+
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
