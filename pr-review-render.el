@@ -65,7 +65,9 @@
     (let ((inhibit-modification-hooks nil)
           (diff-font-lock-syntax 'hunk-also))
       (erase-buffer)
-      (insert (string-replace "\r\n" "\n" body)
+      (insert "\n"  ;; insert a newline at first line (and ignore later)
+                    ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
+              (string-replace "\r\n" "\n" body)
               " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
@@ -107,7 +109,7 @@
     (when fill-col
       (fill-region (point-min) (point-max)))
 
-    (let ((res (buffer-string)))
+    (let ((res (buffer-substring 2 (point-max))))  ;; start at 2: skip first newline
       (when margin
         (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
       res)))
