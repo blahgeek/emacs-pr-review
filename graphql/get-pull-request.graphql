@@ -21,6 +21,12 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       }
       viewerCanUpdate
 
+      baseRef {
+        refUpdateRule {
+          requiredStatusCheckContexts
+        }
+      }
+
       labels(first: 100) {
         nodes {
           name

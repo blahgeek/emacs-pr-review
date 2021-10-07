@@ -379,10 +379,20 @@ return t on success."
                        "\n"))
              groups)))
 
-(defun pr-review--insert-check-section (status-check-rollup)
+(defun pr-review--insert-check-section (status-check-rollup required-contexts)
   (magit-insert-section (pr-review--check-section)
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
                                   (pr-review--propertize-keyword (alist-get 'state status-check-rollup))))
+    (let ((valid-contexts (mapcar (lambda (node) (alist-get 'context node))
+                                  (let-alist status-check-rollup .contexts.nodes))))
+      (mapc (lambda (required-context)
+              (unless (member required-context valid-contexts)
+                (insert (concat "- "
+                                (propertize required-context 'face 'pr-review-author-face)
+                                ": "
+                                (propertize "REQUIRED" 'face 'pr-review-error-state-face)
+                                "\n"))))
+            required-contexts))
     (mapc (lambda (node)
             (let-alist node
               (pcase .__typename
@@ -478,11 +488,13 @@ return t on success."
         ('comment
          (pr-review--insert-comment-section (car review-or-comment)))))
     (insert "\n")
-    (when-let ((status-check-rollup (let-alist
-                                        (nth 0 (let-alist pr .commits.nodes))
-                                      .commit.statusCheckRollup)))
-      (pr-review--insert-check-section status-check-rollup)
-      (insert "\n"))
+    (let ((status-check-rollup (let-alist
+                                   (nth 0 (let-alist pr .commits.nodes))
+                                 .commit.statusCheckRollup))
+          (required-contexts (let-alist pr .baseRef.refUpdateRule.requiredStatusCheckContexts)))
+      (when (or status-check-rollup required-contexts)
+        (pr-review--insert-check-section status-check-rollup required-contexts)
+        (insert "\n")))
     (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
