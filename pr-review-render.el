@@ -32,15 +32,34 @@
 
 (defvar-local pr-review--diff-begin-point 0)
 
+(defcustom pr-review-section-indent-width 2
+  "Indent width for nested sections."
+  :type 'integer
+  :group 'pr-review)
+
+(defvar pr-review--section-ellipsis "…")
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
+
+(defun pr-review--propertize-keyword (str)
+  (propertize str 'face
+              (cond
+               ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
+                'pr-review-success-state-face)
+               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED"))
+                'pr-review-error-state-face)
+               ((member str '("RESOLVED" "OUTDATED"))
+                'pr-review-unimportant-state-face)
+               (t
+                'pr-review-state-face))))
 
 (defun pr-review--insert-link (title url)
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
-(defun pr-review--fontify (body lang-mode &optional fill-col)
+(defun pr-review--fontify (body lang-mode &optional fill-col margin)
   (with-current-buffer
       (get-buffer-create (format " *pr-review-fontification:%s*" lang-mode))
     (let ((inhibit-modification-hooks nil)
@@ -88,11 +107,14 @@
     (when fill-col
       (fill-region (point-min) (point-max)))
 
-    (buffer-string)))
+    (let ((res (buffer-string)))
+      (when margin
+        (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
+      res)))
 
 
-(defun pr-review--insert-fontified (body lang-mode &optional fill-col)
-  (insert (pr-review--fontify body lang-mode fill-col)))
+(defun pr-review--insert-fontified (body lang-mode &optional fill-col margin)
+  (insert (pr-review--fontify body lang-mode fill-col margin)))
 
 
 (defun pr-review--insert-diff (diff)
@@ -221,23 +243,29 @@ return t on success."
                                  (eq t (alist-get 'isCollapsed review-thread)))
     (oset section top-comment-id (alist-get 'id top-comment))
     (oset section is-resolved (eq t (alist-get 'isResolved review-thread)))
-    (magit-insert-heading
-      (propertize
-       (let-alist review-thread
+    (let-alist review-thread
+      (magit-insert-heading
+        (make-string pr-review-section-indent-width ?\s)
+        (propertize
          (concat
           .path (when .line (if .startLine
                                 (format ":%s-%s" .startLine .line)
-                              (format ":%s" .line)))
-          (when (eq t .isResolved) " - RESOLVED")
-          (when (eq t .isOutdated) " - OUTDATED")))
-       'face 'magit-section-secondary-heading))
-    (insert (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
+                              (format ":%s" .line))))
+         'face 'magit-section-secondary-heading)
+        (when (eq t .isResolved)
+          (concat " - " (propertize "RESOLVED" 'face 'pr-review-unimportant-state-face)))
+        (when (eq t .isOutdated)
+          (concat " - " (propertize "OUTDATED" 'face 'pr-review-unimportant-state-face)))))
+    (insert
+     (make-string pr-review-section-indent-width ?\s)
+     (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
     (let ((diffhunk-lines (split-string (alist-get 'diffHunk top-comment) "\n"))
           beg end)
       (setq beg (point))
       (while (length> diffhunk-lines 4)   ;; diffHunk may be very long, only keep last 4 lines
         (setq diffhunk-lines (cdr diffhunk-lines)))
-      (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode)
+      (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
+                                   nil pr-review-section-indent-width)
       (setq end (point))
       (make-button beg end
                    'face nil
@@ -251,15 +279,18 @@ return t on success."
                 (oset item-section updatable .viewerCanUpdate)
                 (oset item-section body .body)
                 (magit-insert-heading
+                  (make-string (* 2 pr-review-section-indent-width) ?\s)
                   (propertize (concat "@" .author.login)
                               'face 'pr-review-author-face)
                   " - "
                   (propertize (pr-review--format-timestamp .createdAt)
-                              'face 'pr-review-timestamp-face)
-                  " ::")
-                (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+                              'face 'pr-review-timestamp-face))
+                (pr-review--insert-fontified .body 'gfm-mode
+                                             'fill-column (* 2 pr-review-section-indent-width))
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
+
+    (insert "\n" (make-string (* 2 pr-review-section-indent-width) ?\s))
     (insert-button "Reply to thread"
                    'face 'pr-review-button-face
                    'action 'pr-review-reply-to-thread)
@@ -286,8 +317,12 @@ return t on success."
           (oset section updatable .viewerCanUpdate)
           (oset section body .body)
           (magit-insert-heading
-            "@" .author.login " REVIEW " .state " - "
-            (pr-review--format-timestamp .createdAt))
+            (propertize "Reviewed by " 'face 'magit-section-heading)
+            (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
+            " - "
+            (pr-review--propertize-keyword .state)
+            " - "
+            (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
           (unless (string-empty-p .body)
             (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
           (insert "\n")
@@ -302,8 +337,10 @@ return t on success."
       (oset section updatable .viewerCanUpdate)
       (oset section body .body)
       (magit-insert-heading
-        "@" .author.login " COMMENTED - "
-        (pr-review--format-timestamp .createdAt))
+        (propertize "Commented by " 'face 'magit-section-heading)
+        (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
+        " - "
+        (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
       (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
       (insert "\n"))))
 
@@ -320,7 +357,7 @@ return t on success."
               (push .author.login (gethash .state groups))))
           (let-alist pr-info .latestOpinionatedReviews.nodes))
     (maphash (lambda (status users)
-               (insert (propertize status 'face 'pr-review-state-face)
+               (insert (pr-review--propertize-keyword status)
                        ": "
                        (mapconcat (lambda (user)
                                     (propertize (concat "@" user) 'face 'pr-review-author-face))
@@ -338,10 +375,10 @@ return t on success."
                  (insert (concat "- "
                                  (propertize .name 'face 'pr-review-author-face)
                                  ": "
-                                 (propertize .status 'face 'pr-review-state-face)
+                                 (pr-review--propertize-keyword .status)
                                  (when .conclusion
-                                   (propertize (concat " - " .conclusion)
-                                               'face 'pr-review-state-face))
+                                   (concat " - "
+                                           (pr-review--propertize-keyword .conclusion)))
                                  (when .title
                                    (concat " - " .title))
                                  "\n")))
@@ -349,7 +386,7 @@ return t on success."
                  (insert (concat "- "
                                  (propertize .context 'face 'pr-review-author-face)
                                  ": "
-                                 (propertize .state 'face 'pr-review-state-face)
+                                 (pr-review--propertize-keyword .state)
                                  (when .description
                                    (concat " - " .description))
                                  " "))
@@ -405,7 +442,7 @@ return t on success."
                                          :inherit pr-review-label-face)))
                          .labels.nodes " ")
               "\n")
-      (insert (propertize .state 'face 'pr-review-state-face)
+      (insert (pr-review--propertize-keyword .state)
               " - "
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "

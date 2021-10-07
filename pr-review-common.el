@@ -39,6 +39,21 @@
   "Face used for state (e.g. MERGED)."
   :group 'pr-review)
 
+(defface pr-review-error-state-face
+  '((t :inherit error :weight bold))
+  "Face used for error state (e.g. changes requested)."
+  :group 'pr-review)
+
+(defface pr-review-success-state-face
+  '((t :inherit success :weight bold))
+  "Face used for success state (e.g. merged)."
+  :group 'pr-review)
+
+(defface pr-review-unimportant-state-face
+  '((t :slant italic))
+  "Face used for unimportant state (e.g. resolved)."
+  :group 'pr-review)
+
 (defface pr-review-author-face
   '((t :inherit font-lock-keyword-face))
   "Face used for author names."
