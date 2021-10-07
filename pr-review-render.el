@@ -107,7 +107,19 @@
         (remove-overlays (point-min) (point-max) 'diff-mode 'syntax)))
 
     (when fill-col
-      (fill-region (point-min) (point-max)))
+      (let ((use-hard-newlines t)
+            fill-paragraph-function fill-forward-paragraph-function)
+        (when (eq lang-mode 'gfm-mode)
+          (setq fill-paragraph-function 'markdown-fill-paragraph
+                fill-forward-paragraph-function 'markdown-fill-forward-paragraph))
+        ;; mark all newlines as hard newlines, because github markdown does not need two spaces to separate a paragraph
+        (save-excursion
+          (goto-char (point-min))
+          (while (search-forward "\n" nil t)
+            (let ((pos (point)))
+              (set-hard-newline-properties (1- pos) pos))
+            (end-of-line)))
+        (fill-region (point-min) (point-max) nil 'nosqueeze)))
 
     (let ((res (buffer-substring 2 (point-max))))  ;; start at 2: skip first newline
       (when margin
