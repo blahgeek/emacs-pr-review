@@ -360,7 +360,7 @@ return t on success."
 
 (defun pr-review--insert-reviewers-info (pr-info)
   (let ((groups (make-hash-table :test 'equal)))
-    (when-let ((review-requests (let-alist pr-info .reviewRequests.node)))
+    (when-let ((review-requests (let-alist pr-info .reviewRequests.nodes)))
       (when (length> review-requests 0)
         (puthash "PENDING" (mapcar (lambda (review-request)
                                      (let-alist review-request .requestedReviewer.login))
