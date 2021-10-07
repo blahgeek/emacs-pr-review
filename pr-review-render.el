@@ -369,7 +369,8 @@ return t on success."
 
 (defun pr-review--insert-check-section (status-check-rollup)
   (magit-insert-section (pr-review--check-section)
-    (magit-insert-heading (concat "Check status - " (alist-get 'state status-check-rollup)))
+    (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
+                                  (pr-review--propertize-keyword (alist-get 'state status-check-rollup))))
     (mapc (lambda (node)
             (let-alist node
               (pcase .__typename
