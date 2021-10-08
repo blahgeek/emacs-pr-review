@@ -182,6 +182,11 @@
                (pullRequestId . ,pr-node-id)
                (threads . ,pending-threads))))))
 
+(defun pr-review--search-prs (query)
+  (let-alist (pr-review--execute-graphql
+              'search-prs
+              `((query . ,query)))
+    .search.nodes))
 
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here

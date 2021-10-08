@@ -224,5 +224,26 @@ Works like `pr-review' but accepts URL, can be used in `browse-url-handlers'."
       (apply 'pr-review (append res (list new-window))))))
 
 
+;;;###autoload
+(defun pr-review-search-open (query)
+  "Search PRs using a custom query and open one of them.
+See github docs for syntax of the query.
+When called interactively, you will be asked to enter the query."
+  (interactive (list (read-string "Search GitHub> "
+                                  "type:pr sort:updated author:@me state:open")))
+  (let* ((prs (pr-review--search-prs query))
+         (prs-alist (mapcar (lambda (pr)
+                              (let-alist pr
+                                (cons (format "%s/%s: [%s] %s"
+                                              .repository.nameWithOwner .number .state .title)
+                                      .url)))
+                            prs))
+         (selected-pr (completing-read "Select:"
+                                       (mapcar #'car prs-alist)
+                                       nil 'require-match)))
+    (when-let ((selected-url (alist-get selected-pr prs-alist nil nil 'equal)))
+      (pr-review-open-url selected-url))))
+
+
 (provide 'pr-review)
 ;;; pr-review.el ends here
