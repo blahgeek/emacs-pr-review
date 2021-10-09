@@ -188,5 +188,34 @@
               `((query . ,query)))
     .search.nodes))
 
+(defun pr-review--get-assignable-users-1 (repo-owner repo-name)
+  (let ((has-next-page t)
+        cursor res)
+    (while has-next-page
+      (let-alist (pr-review--execute-graphql 'get-assignable-users
+                                             `((repo_owner . ,repo-owner)
+                                               (repo_name . ,repo-name)
+                                               (cursor . ,cursor)))
+        (setq has-next-page .repository.assignableUsers.pageInfo.hasNextPage
+              cursor .repository.assignableUsers.pageInfo.endCursor
+              res (append res .repository.assignableUsers.nodes))))
+    res))
+
+;; alist of (repo-owner . repo-name) -> users
+(defvar pr-review--cached-assignable-users nil)
+
+(defun pr-review--get-assignable-users ()
+  (let ((repo-owner (car pr-review--pr-path))
+        (repo-name (cadr pr-review--pr-path)))
+    (if-let ((res (alist-get (cons repo-owner repo-name)
+                             pr-review--cached-assignable-users nil nil 'equal)))
+        res
+      (message "Fetching assignable users for %s/%s..." repo-owner repo-name)
+      (setq res (pr-review--get-assignable-users-1 repo-owner repo-name))
+      (setf (alist-get (cons repo-owner repo-name)
+                       pr-review--cached-assignable-users nil nil 'equal)
+            res)
+      res)))
+
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here
