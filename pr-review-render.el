@@ -452,8 +452,10 @@ return t on success."
           (append
            (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
            (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes)))))
-    (sort review-or-comments (lambda (a b) (string< (alist-get 'createdAt (car a))
-                                                    (alist-get 'createdAt (car b)))))
+    (setq review-or-comments
+          (sort review-or-comments
+                (lambda (a b) (string< (alist-get 'createdAt (car a))
+                                       (alist-get 'createdAt (car b))))))
     (let-alist pr
       (insert (propertize .baseRefName 'face 'pr-review-branch-face)
               " <- "
