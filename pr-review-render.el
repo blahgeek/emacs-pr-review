@@ -48,7 +48,7 @@
               (cond
                ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
                 'pr-review-success-state-face)
-               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED"))
+               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING"))
                 'pr-review-error-state-face)
                ((member str '("RESOLVED" "OUTDATED"))
                 'pr-review-info-state-face)
@@ -358,6 +358,28 @@ return t on success."
       (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
       (insert "\n"))))
 
+(defun pr-review--insert-event-section (event)
+  (let-alist event
+    (magit-insert-section (pr-review--event-section nil 'hide)
+      (pcase .__typename
+        ("MergedEvent" (magit-insert-heading
+                         (propertize "* " 'face 'magit-section-heading)
+                         (propertize "Merged" 'face 'pr-review-success-state-face)
+                         (propertize " into " 'face 'magit-section-heading)
+                         (propertize .mergeRefName 'face 'pr-review-branch-face)
+                         (propertize " by " 'face 'magit-section-heading)
+                         (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
+                         " - "
+                         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
+        ("ClosedEvent" (magit-insert-heading
+                         (propertize "* " 'face 'magit-section-heading)
+                         (propertize "Closed" 'face 'pr-review-error-state-face)
+                         (propertize " by " 'face 'magit-section-heading)
+                         (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
+                         " - "
+                         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
+        ))))
+
 (defun pr-review--insert-reviewers-info (pr-info)
   (let ((groups (make-hash-table :test 'equal)))
     (when-let ((review-requests (let-alist pr-info .reviewRequests.nodes)))
@@ -448,12 +470,13 @@ return t on success."
 (defun pr-review--insert-pr-body (pr diff)
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
-        (review-or-comments
+        (timeline-items
           (append
            (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
-           (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes)))))
-    (setq review-or-comments
-          (sort review-or-comments
+           (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
+           (mapcar (lambda (x) (cons x 'event)) (let-alist pr .timelineItems.nodes)))))
+    (setq timeline-items
+          (sort timeline-items
                 (lambda (a b) (string< (alist-get 'createdAt (car a))
                                        (alist-get 'createdAt (car b))))))
     (let-alist pr
@@ -470,6 +493,9 @@ return t on success."
                          .labels.nodes " ")
               "\n")
       (insert (pr-review--propertize-keyword .state)
+              (if (equal .state "OPEN")
+                  (concat " - " (pr-review--propertize-keyword .mergeable))
+                "")
               " - "
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "
@@ -483,12 +509,14 @@ return t on success."
         (magit-insert-heading "Description")
         (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
       (insert "\n"))
-    (dolist (review-or-comment review-or-comments)
-      (pcase (cdr review-or-comment)
+    (dolist (timeline-item timeline-items)
+      (pcase (cdr timeline-item)
         ('review
-         (pr-review--insert-review-section (car review-or-comment) top-comment-id-to-review-thread))
+         (pr-review--insert-review-section (car timeline-item) top-comment-id-to-review-thread))
         ('comment
-         (pr-review--insert-comment-section (car review-or-comment)))))
+         (pr-review--insert-comment-section (car timeline-item)))
+        ('event
+         (pr-review--insert-event-section (car timeline-item)))))
     (insert "\n")
     (let ((status-check-rollup (let-alist
                                    (nth 0 (let-alist pr .commits.nodes))
