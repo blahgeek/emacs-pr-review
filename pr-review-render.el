@@ -360,7 +360,7 @@ return t on success."
 
 (defun pr-review--insert-event-section (event)
   (let-alist event
-    (magit-insert-section (pr-review--event-section nil 'hide)
+    (magit-insert-section (pr-review--event-section .id 'hide)
       (pcase .__typename
         ("MergedEvent" (magit-insert-heading
                          (propertize "* " 'face 'magit-section-heading)
@@ -378,7 +378,8 @@ return t on success."
                          (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
                          " - "
                          (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
-        ))))
+        ))
+    (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
   (let ((groups (make-hash-table :test 'equal)))

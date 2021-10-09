@@ -166,6 +166,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         nodes {
           __typename
           ... on MergedEvent {
+            id
             createdAt
             actor {
               login
@@ -173,6 +174,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             mergeRefName
           }
           ... on ClosedEvent {
+            id
             createdAt
             actor {
               login
