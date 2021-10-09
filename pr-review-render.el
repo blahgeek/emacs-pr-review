@@ -403,7 +403,7 @@ return t on success."
              groups)))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
-  (magit-insert-section (pr-review--check-section)
+  (magit-insert-section (pr-review--check-section 'check-section-id)
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
                                   (pr-review--propertize-keyword (alist-get 'state status-check-rollup))))
     (let ((valid-contexts (mapcar (lambda (node) (alist-get 'context node))
