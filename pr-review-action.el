@@ -42,7 +42,7 @@
       (pr-review--open-input-buffer
        "Reply to thread." nil
        (apply-partially 'pr-review--post-review-comment-reply
-                        pr-review--pr-node-id
+                        (alist-get 'id pr-review--pr-info)
                         (oref section top-comment-id))
        'refresh-after-exit))))
 
@@ -75,7 +75,7 @@
      "Comment to PR."
      (lambda () (when reply-content (insert "> " reply-content)))
      (apply-partially 'pr-review--post-comment
-                      pr-review--pr-node-id)
+                      (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
 
@@ -170,8 +170,8 @@ When a region is active, the review thread is added for multiple lines."
 (defun pr-review--submit-review-exit-callback (orig-buffer event body)
   (when (buffer-live-p orig-buffer)
     (with-current-buffer orig-buffer
-      (pr-review--post-review pr-review--pr-node-id
-                              pr-review--head-commit-id
+      (pr-review--post-review (alist-get 'id pr-review--pr-info)
+                              (alist-get 'headRefOid pr-review--pr-info)
                               event
                               (nreverse pr-review--pending-review-threads)
                               body)
@@ -243,7 +243,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update PR description."
      (lambda () (insert body))
-     (apply-partially 'pr-review--update-pr-body pr-review--pr-node-id)
+     (apply-partially 'pr-review--update-pr-body (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
 (defun pr-review-edit-pr-title ()
@@ -256,7 +256,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update PR title."
      (lambda () (insert title))
-     (apply-partially 'pr-review--update-pr-title pr-review--pr-node-id)
+     (apply-partially 'pr-review--update-pr-title (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
 (defun pr-review-view-file ()

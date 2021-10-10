@@ -146,9 +146,7 @@
 (defclass pr-review--event-section (magit-section) ())
 
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
-(defvar-local pr-review--pr-node-id nil)
-(defvar-local pr-review--head-commit-id nil)
-(defvar-local pr-review--base-commit-id nil)
+(defvar-local pr-review--pr-info nil "Result of fetch-pr-info, useful for actions.")
 (defvar-local pr-review--pending-review-threads nil)
 
 (provide 'pr-review-common)

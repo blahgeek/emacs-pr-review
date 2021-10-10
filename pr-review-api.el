@@ -109,9 +109,10 @@
   (let* ((repo-owner (car pr-review--pr-path))
          (repo-name (cadr pr-review--pr-path))
          (url (format "/repos/%s/%s/contents/%s" repo-owner repo-name filepath))
-         (ref (pcase head-or-base
-                ('head pr-review--head-commit-id)
-                ('base pr-review--base-commit-id))))
+         (ref (alist-get (pcase head-or-base
+                           ('head 'headRefOid)
+                           ('base 'baseRefOid))
+                         pr-review--pr-info)))
     (ghub-request "GET" url `((ref . ,ref))
                   :headers '(("Accept" . "application/vnd.github.v3.raw"))
                   :reader 'ghub--decode-payload

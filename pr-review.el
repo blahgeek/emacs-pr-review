@@ -119,11 +119,8 @@
                     (pr-review--fetch-compare-cached
                      .baseRefOid .headRefOid)))
          section-id)
-    (let-alist pr-info
-      (setq-local pr-review--pr-node-id .id
-                  pr-review--head-commit-id .headRefOid
-                  pr-review--base-commit-id .baseRefOid
-                  pr-review--pending-review-threads nil))
+    (setq-local pr-review--pr-info pr-info
+                pr-review--pending-review-threads nil)
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))
     (let ((inhibit-read-only t))
