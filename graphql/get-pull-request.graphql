@@ -8,6 +8,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
     pullRequest(number: $pr_id) {
       id
       state
+      mergeable
       headRefName
       headRefOid
       baseRefName
@@ -165,6 +166,28 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           }
         }
       }
+
+      timelineItems(first: 100, itemTypes: [MERGED_EVENT, CLOSED_EVENT]) {
+        nodes {
+          __typename
+          ... on MergedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+            mergeRefName
+          }
+          ... on ClosedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+          }
+        }
+      }
+
     }
   }
 }
