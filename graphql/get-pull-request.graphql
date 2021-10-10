@@ -16,6 +16,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       createdAt
       title
       body
+      bodyHTML
       author {
         login
       }
@@ -61,6 +62,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             login
           }
           body
+          bodyHTML
           createdAt
         }
       }
@@ -71,6 +73,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             login
           }
           body
+          bodyHTML
           createdAt
           state
         }
@@ -81,6 +84,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           id
           viewerCanUpdate
           body
+          bodyHTML
           state
           author {
             login
@@ -120,6 +124,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
                 login
               }
               body
+              bodyHTML
               createdAt
             }
           }

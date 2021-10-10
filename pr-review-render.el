@@ -29,8 +29,10 @@
 (require 'magit-section)
 (require 'magit-diff)
 (require 'markdown-mode)
+(require 'shr)
 
 (defvar-local pr-review--diff-begin-point 0)
+(defvar-local pr-review--char-pixel-width 0)
 
 (defcustom pr-review-section-indent-width 2
   "Indent width for nested sections."
@@ -58,6 +60,64 @@
 (defun pr-review--insert-link (title url)
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
+
+(defun pr-review--shr-tag-div (dom)
+  "Function for rendering div tag in shr, special handle for suggested-changes."
+  (if (not (string-match-p ".*suggested-changes.*" (or (dom-attr dom 'class) "")))
+      (shr-tag-div dom)
+    (let ((tbody (dom-by-tag dom 'tbody))
+          (shr-indentation (+ shr-indentation (* 2 pr-review--char-pixel-width))))
+      (let ((shr-current-font 'pr-review-info-state-face))
+        (shr-insert "* Suggested change:")
+        (insert "\n"))
+      (dolist (tr (dom-non-text-children tbody))
+        (dolist (td (dom-non-text-children tr))
+          (let ((classes (split-string (or (dom-attr td 'class) ""))))
+            (cond
+             ((member "blob-num" classes) t)
+             ((member "blob-code-deletion" classes)
+              (let ((shr-current-font 'diff-indicator-removed))
+                (shr-insert "-"))
+              (let ((shr-current-font 'diff-removed))
+                (shr-generic td)
+                (insert (propertize "\n" 'face 'diff-removed))))
+             ((member "blob-code-addition" classes)
+              (let ((shr-current-font 'diff-indicator-added))
+                (shr-insert "+"))
+              (let ((shr-current-font 'diff-added))
+                (shr-generic td)
+                (insert (propertize "\n" 'face 'diff-added))))
+             (t
+              (shr-generic td)))))))))
+
+(defun pr-review--insert-html (body &optional indent)
+  (let ((shr-indentation (* (or indent 0) pr-review--char-pixel-width))
+        (shr-external-rendering-functions '((div . pr-review--shr-tag-div)))
+        (start (point))
+        dom)
+    (with-temp-buffer
+      (insert body)
+      (setq dom (libxml-parse-html-region (point-min) (point-max))))
+    ;; narrow the buffer and insert dom. otherwise there would be an extra new line at start
+    (save-restriction
+      (insert " ")
+      (narrow-to-region start (1+ start))
+      (goto-char start)
+      (shr-insert-document dom)
+      ;; delete the inserted " "
+      (delete-char 1))
+    (when (> shr-indentation 0)
+      ;; shr-indentation does not work for images and code block
+      ;; let's fix it: prepend space for any lines that does not starts with a space
+      ;; (but we still need to use shr-indentation because otherwise the line will be too long)
+      (save-excursion
+        (goto-char start)
+        (while (not (eobp))
+          (unless (or (looking-at-p "\n")
+                      (eq 'space (car-safe (get-text-property (point) 'display))))
+            (beginning-of-line)
+            (insert (propertize " " 'display `(space :width (,shr-indentation)))))
+          (forward-line) 0)))))
 
 (defun pr-review--fontify (body lang-mode &optional fill-col margin)
   (with-current-buffer
@@ -214,7 +274,8 @@ return t on success."
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          (pr-review--insert-fontified .body 'gfm-mode)
+          ;; (pr-review--insert-fontified .body 'gfm-mode)
+          (pr-review--insert-html .bodyHTML)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
@@ -299,12 +360,13 @@ return t on success."
                   " - "
                   (propertize (pr-review--format-timestamp .createdAt)
                               'face 'pr-review-timestamp-face))
-                (pr-review--insert-fontified .body 'gfm-mode
-                                             'fill-column (* 2 pr-review-section-indent-width))
+                ;; (pr-review--insert-fontified .body 'gfm-mode
+                ;;                              'fill-column (* 2 pr-review-section-indent-width))
+                (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width))
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
 
-    (insert "\n" (make-string (* 2 pr-review-section-indent-width) ?\s))
+    (insert (make-string (* 2 pr-review-section-indent-width) ?\s))
     (insert-button "Reply to thread"
                    'face 'pr-review-button-face
                    'action 'pr-review-reply-to-thread)
@@ -338,7 +400,8 @@ return t on success."
             " - "
             (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
           (unless (string-empty-p .body)
-            (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
+            ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+            (pr-review--insert-html .bodyHTML))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
             (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread))
@@ -355,7 +418,8 @@ return t on success."
         (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
         " - "
         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
-      (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+      ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+      (pr-review--insert-html .bodyHTML)
       (insert "\n"))))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -479,7 +543,8 @@ return t on success."
         (oset section body .body)
         (oset section updatable .viewerCanUpdate)
         (magit-insert-heading "Description")
-        (pr-review--insert-fontified .body 'gfm-mode 'fill-column))
+        ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
+        (pr-review--insert-html .bodyHTML))
       (insert "\n"))
     (dolist (review-or-comment review-or-comments)
       (pcase (cdr review-or-comment)
@@ -512,6 +577,7 @@ return t on success."
           (let-alist pr .reviewThreads.nodes))))
 
 (defun pr-review--insert-pr (pr diff)
+  (setq pr-review--char-pixel-width (shr-string-pixel-width "-"))
   (magit-insert-section section (pr-review--root-section)
     (let-alist pr
       (oset section title .title)
