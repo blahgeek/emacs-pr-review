@@ -119,41 +119,19 @@
             (insert (propertize " " 'display `(space :width (,shr-indentation)))))
           (forward-line) 0)))))
 
-(defun pr-review--fontify (body lang-mode &optional fill-col margin)
+(defun pr-review--fontify (body lang-mode &optional margin)
   (with-current-buffer
       (get-buffer-create (format " *pr-review-fontification:%s*" lang-mode))
     (let ((inhibit-modification-hooks nil)
           (diff-font-lock-syntax 'hunk-also))
       (erase-buffer)
-      (insert "\n"  ;; insert a newline at first line (and ignore later)
-                    ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
-              (string-replace "\r\n" "\n" body)
+      (insert (string-replace "\r\n" "\n" body)
               " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
       (condition-case-unless-debug nil
           (font-lock-ensure)
         (error nil)))
-
-    (when (eq lang-mode 'gfm-mode)
-      (let ((markdown-display-remote-images t)
-            (markdown-max-image-size `(,(window-pixel-width) . nil)))
-        (markdown-display-inline-images))
-      ;; copy overlays to text properties with 'display property (images)
-      (save-excursion
-        (dolist (ol (overlays-in (point-min) (point-max)))
-          (when-let ((display (overlay-get ol 'display)))
-            (add-text-properties (overlay-start ol)
-                                 (overlay-end ol)
-                                 `(display ,display))))))
-
-    ;; delete invisible texts
-    (let (match)
-      (goto-char (point-min))
-      (while (setq match (text-property-search-forward 'invisible))
-        (let ((beg (prop-match-beginning match))
-              (end (prop-match-end match)))
-          (remove-text-properties beg end '(invisible nil)))))
 
     (when (eq lang-mode 'diff-mode)
       (save-excursion
@@ -166,29 +144,13 @@
         (goto-char (point-min))
         (remove-overlays (point-min) (point-max) 'diff-mode 'syntax)))
 
-    (when fill-col
-      (let ((use-hard-newlines t)
-            fill-paragraph-function fill-forward-paragraph-function)
-        (when (eq lang-mode 'gfm-mode)
-          (setq fill-paragraph-function 'markdown-fill-paragraph
-                fill-forward-paragraph-function 'markdown-fill-forward-paragraph))
-        ;; mark all newlines as hard newlines, because github markdown does not need two spaces to separate a paragraph
-        (save-excursion
-          (goto-char (point-min))
-          (while (search-forward "\n" nil t)
-            (let ((pos (point)))
-              (set-hard-newline-properties (1- pos) pos))
-            (end-of-line)))
-        (fill-region (point-min) (point-max) nil 'nosqueeze)))
-
-    (let ((res (buffer-substring 2 (point-max))))  ;; start at 2: skip first newline
+    (let ((res (buffer-string)))
       (when margin
         (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
       res)))
 
-
-(defun pr-review--insert-fontified (body lang-mode &optional fill-col margin)
-  (insert (pr-review--fontify body lang-mode fill-col margin)))
+(defun pr-review--insert-fontified (body lang-mode &optional margin)
+  (insert (pr-review--fontify body lang-mode margin)))
 
 
 (defun pr-review--insert-diff (diff)
@@ -274,7 +236,6 @@ return t on success."
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          ;; (pr-review--insert-fontified .body 'gfm-mode)
           (pr-review--insert-html .bodyHTML)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
@@ -340,7 +301,7 @@ return t on success."
       (while (length> diffhunk-lines 4)   ;; diffHunk may be very long, only keep last 4 lines
         (setq diffhunk-lines (cdr diffhunk-lines)))
       (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
-                                   nil pr-review-section-indent-width)
+                                   pr-review-section-indent-width)
       (setq end (point))
       (make-button beg end
                    'face nil
@@ -360,8 +321,6 @@ return t on success."
                   " - "
                   (propertize (pr-review--format-timestamp .createdAt)
                               'face 'pr-review-timestamp-face))
-                ;; (pr-review--insert-fontified .body 'gfm-mode
-                ;;                              'fill-column (* 2 pr-review-section-indent-width))
                 (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width))
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
@@ -400,7 +359,6 @@ return t on success."
             " - "
             (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
           (unless (string-empty-p .body)
-            ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
             (pr-review--insert-html .bodyHTML))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
@@ -418,7 +376,6 @@ return t on success."
         (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
         " - "
         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
-      ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
       (pr-review--insert-html .bodyHTML)
       (insert "\n"))))
 
@@ -543,7 +500,6 @@ return t on success."
         (oset section body .body)
         (oset section updatable .viewerCanUpdate)
         (magit-insert-heading "Description")
-        ;; (pr-review--insert-fontified .body 'gfm-mode 'fill-column)
         (pr-review--insert-html .bodyHTML))
       (insert "\n"))
     (dolist (review-or-comment review-or-comments)
