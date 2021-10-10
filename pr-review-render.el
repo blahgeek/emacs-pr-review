@@ -39,8 +39,6 @@
   :type 'integer
   :group 'pr-review)
 
-(defvar pr-review--section-ellipsis "…")
-
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
