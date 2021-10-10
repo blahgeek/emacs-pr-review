@@ -206,6 +206,8 @@
 (defvar pr-review--cached-assignable-users nil)
 
 (defun pr-review--get-assignable-users ()
+  "Get a list of assignable users (alist of 'id, 'login, 'name)
+for current PR, cached."
   (let ((repo-owner (car pr-review--pr-path))
         (repo-name (cadr pr-review--pr-path)))
     (if-let ((res (alist-get (cons repo-owner repo-name)
@@ -217,6 +219,11 @@
                        pr-review--cached-assignable-users nil nil 'equal)
             res)
       res)))
+
+(defun pr-review--post-request-reviews (pr-node-id user-node-ids)
+  (pr-review--execute-graphql 'request-reviews
+                              `((input . ((pullRequestId . ,pr-node-id)
+                                          (userIds . ,user-node-ids))))))
 
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here

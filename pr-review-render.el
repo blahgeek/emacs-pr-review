@@ -408,12 +408,11 @@ return t on success."
 
 (defun pr-review--insert-reviewers-info (pr-info)
   (let ((groups (make-hash-table :test 'equal)))
-    (when-let ((review-requests (let-alist pr-info .reviewRequests.nodes)))
-      (when (length> review-requests 0)
-        (puthash "PENDING" (mapcar (lambda (review-request)
-                                     (let-alist review-request .requestedReviewer.login))
-                                   review-requests)
-                 groups)))
+    (let ((review-requests (let-alist pr-info .reviewRequests.nodes)))
+      (puthash "PENDING" (mapcar (lambda (review-request)
+                                   (let-alist review-request .requestedReviewer.login))
+                                 review-requests)
+               groups))
     (mapc (lambda (opinionated-review)
             (let-alist opinionated-review
               (push .author.login (gethash .state groups))))
@@ -423,8 +422,14 @@ return t on success."
                        ": "
                        (mapconcat (lambda (user)
                                     (propertize (concat "@" user) 'face 'pr-review-author-face))
-                                  users ", ")
-                       "\n"))
+                                  users ", "))
+               (when (equal status "PENDING")
+                 (insert " ")
+                 (insert-button
+                  "Request Review"
+                  'face 'pr-review-button-face
+                  'action (lambda (_) (call-interactively 'pr-review-request-reviews))))
+               (insert "\n"))
              groups)))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)

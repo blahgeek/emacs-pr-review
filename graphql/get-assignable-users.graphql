@@ -6,6 +6,7 @@ query($repo_owner:String!, $repo_name:String!, $cursor:String) {
         hasNextPage
       }
       nodes {
+        id
         login
         name
       }

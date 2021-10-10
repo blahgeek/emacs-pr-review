@@ -31,6 +31,7 @@
 (require 'magit-diff)
 (require 'browse-url)
 
+(declare-function pr-review-refresh "pr-review")
 
 (defun pr-review-reply-to-thread (&rest _)
   "Reply to current thread."
@@ -358,6 +359,33 @@ When called interactively, user can select filepath from list."
   (when-let ((section (seq-find (lambda (section) (equal (oref section value) filepath))
                                 (pr-review--find-all-file-sections magit-root-section))))
     (goto-char (oref section start))))
+
+(defun pr-review-request-reviews (reviewer-logins)
+  "Request reviewers for current PR, with a list of reviewer's logins.
+This will override all existing reviewers (will clear all reviewers on empty).
+When called interactively, user can select reviewers from list."
+  (interactive
+   (list
+    (let ((assignable-users (pr-review--get-assignable-users)))
+      (completing-read-multiple
+       "Request review: "
+       (mapcar (lambda (usr) (alist-get 'login usr)) assignable-users)
+       nil 'require-match
+       (string-join
+        (mapcar (lambda (reviewer) (let-alist reviewer .requestedReviewer.login))
+                (let-alist pr-review--pr-info .reviewRequests.nodes))
+        ",")))))
+  (let* ((assignable-users (pr-review--get-assignable-users))
+         (ids (mapcar (lambda (login)
+                        (let ((usr (seq-find (lambda (elem)
+                                               (equal (alist-get 'login elem) login))
+                                             assignable-users)))
+                          (unless usr
+                            (error "User %s not found" login))
+                          (alist-get 'id usr)))
+                      reviewer-logins)))
+    (pr-review--post-request-reviews (alist-get 'id pr-review--pr-info) ids)
+    (pr-review-refresh)))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
