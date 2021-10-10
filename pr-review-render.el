@@ -123,7 +123,7 @@
                       (eq 'space (car-safe (get-text-property (point) 'display))))
             (beginning-of-line)
             (insert (propertize " " 'display `(space :width (,shr-indentation)))))
-          (forward-line) 0)))))
+          (forward-line))))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
   (with-current-buffer
