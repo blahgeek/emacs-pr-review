@@ -61,12 +61,18 @@
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
+(defun pr-review--dom-string (dom)
+  (mapconcat (lambda (sub)
+               (if (stringp sub)
+                   sub
+                 (pr-review--dom-string sub)))
+             (dom-children dom)))
+
 (defun pr-review--shr-tag-div (dom)
   "Function for rendering div tag in shr, special handle for suggested-changes."
   (if (not (string-match-p ".*suggested-changes.*" (or (dom-attr dom 'class) "")))
       (shr-tag-div dom)
-    (let ((tbody (dom-by-tag dom 'tbody))
-          (shr-indentation (+ shr-indentation (* 2 pr-review--char-pixel-width))))
+    (let ((tbody (dom-by-tag dom 'tbody)))
       (let ((shr-current-font 'pr-review-info-state-face))
         (shr-insert "* Suggested change:")
         (insert "\n"))
@@ -78,15 +84,15 @@
              ((member "blob-code-deletion" classes)
               (let ((shr-current-font 'diff-indicator-removed))
                 (shr-insert "-"))
-              (let ((shr-current-font 'diff-removed))
-                (shr-generic td)
-                (insert (propertize "\n" 'face 'diff-removed))))
+              (insert (propertize (concat (pr-review--dom-string td)
+                                          "\n")
+                                  'face 'diff-removed)))
              ((member "blob-code-addition" classes)
               (let ((shr-current-font 'diff-indicator-added))
                 (shr-insert "+"))
-              (let ((shr-current-font 'diff-added))
-                (shr-generic td)
-                (insert (propertize "\n" 'face 'diff-added))))
+              (insert (propertize (concat (pr-review--dom-string td)
+                                          "\n")
+                                  'face 'diff-added)))
              (t
               (shr-generic td)))))))))
 
