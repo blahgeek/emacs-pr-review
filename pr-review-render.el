@@ -129,13 +129,23 @@
     (let ((inhibit-modification-hooks nil)
           (diff-font-lock-syntax 'hunk-also))
       (erase-buffer)
-      (insert (string-replace "\r\n" "\n" body)
+      (insert "\n"  ;; insert a newline at first line (and ignore later)
+                    ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
+              (string-replace "\r\n" "\n" body)
               " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
       (condition-case-unless-debug nil
           (font-lock-ensure)
         (error nil)))
+
+    ;; delete invisible texts
+    (let (match)
+      (goto-char (point-min))
+      (while (setq match (text-property-search-forward 'invisible))
+        (let ((beg (prop-match-beginning match))
+              (end (prop-match-end match)))
+          (remove-text-properties beg end '(invisible nil)))))
 
     (when (eq lang-mode 'diff-mode)
       (save-excursion
@@ -148,10 +158,11 @@
         (goto-char (point-min))
         (remove-overlays (point-min) (point-max) 'diff-mode 'syntax)))
 
-    (let ((res (buffer-string)))
+    (let ((res (buffer-substring 2 (point-max))))  ;; start at 2: skip first newline
       (when margin
         (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
       res)))
+
 
 (defun pr-review--insert-fontified (body lang-mode &optional margin)
   (insert (pr-review--fontify body lang-mode margin)))
@@ -240,7 +251,7 @@ return t on success."
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          (pr-review--insert-html .bodyHTML)
+          (pr-review--insert-fontified .body 'gfm-mode)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
