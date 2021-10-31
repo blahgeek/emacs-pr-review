@@ -76,6 +76,7 @@
       (kbd "g o") #'pr-review-open-in-default-browser
       [remap evil-previous-line] 'evil-previous-visual-line
       [remap evil-next-line] 'evil-next-visual-line
+      (kbd "C-o") 'pop-to-mark-command
       (kbd "q") #'kill-current-buffer)))
 
 (defvar-local pr-review--current-show-level 3)
@@ -120,7 +121,8 @@
                     (pr-review--fetch-compare-cached
                      .baseRefOid .headRefOid)))
          section-id)
-    (setq-local pr-review--pr-info pr-info)
+    (setq-local pr-review--pr-info pr-info
+                mark-ring nil)
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))
     (let ((inhibit-read-only t))

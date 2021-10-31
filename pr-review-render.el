@@ -288,7 +288,9 @@ it will be inserted at the beginning."
           (insert-button
            "Go to thread"
            'face 'pr-review-button-face
-           'action (lambda (_) (pr-review--goto-section-with-value .id)))
+           'action (lambda (_)
+                     (push-mark)
+                     (pr-review--goto-section-with-value .id)))
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
@@ -324,8 +326,10 @@ it will be inserted at the beginning."
       (make-button beg end
                    'face nil
                    'help-echo "Click to go to the line in diff."
-                   'action (lambda (_) (let-alist review-thread
-                                         (pr-review--goto-diff-line .path .diffSide .line)))))
+                   'action (lambda (_)
+                             (push-mark)
+                             (let-alist review-thread
+                               (pr-review--goto-diff-line .path .diffSide .line)))))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
