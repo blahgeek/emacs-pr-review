@@ -32,7 +32,6 @@
 (require 'pr-review-input)
 (require 'pr-review-render)
 (require 'pr-review-action)
-(require 'markdown-mode)
 
 (defun pr-review--confirm-kill-buffer ()
   (or (null pr-review--pending-review-threads)
@@ -41,7 +40,6 @@
 (defvar pr-review-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map magit-section-mode-map)
-    (define-key map (kbd "C-c C-l") #'markdown-follow-link-at-point)
     (define-key map (kbd "C-c C-r") #'pr-review-refresh)
     (define-key map (kbd "C-c C-c") #'pr-review-context-comment)
     (define-key map (kbd "C-c C-s") #'pr-review-context-action)
@@ -55,7 +53,6 @@
 (with-eval-after-load 'evil
   (when (fboundp 'evil-define-key*)
     (evil-define-key* '(normal motion) pr-review-mode-map
-      (kbd "g l") #'markdown-follow-link-at-point
       (kbd "g r") #'pr-review-refresh
       (kbd "TAB") #'magit-section-toggle
       (kbd "z a") #'magit-section-toggle
