@@ -120,26 +120,30 @@
                     (pr-review--fetch-compare-cached
                      .baseRefOid .headRefOid)))
          section-id)
-    (setq-local pr-review--pr-info pr-info
-                pr-review--pending-review-threads nil)
+    (setq-local pr-review--pr-info pr-info)
     (when-let ((section (magit-current-section)))
       (setq section-id (oref section value)))
     (let ((inhibit-read-only t))
       (erase-buffer)
-      (pr-review--insert-pr pr-info pr-diff))
+      (pr-review--insert-pr pr-info pr-diff)
+      (mapc (lambda (th) (pr-review--insert-in-diff-pending-review-thread
+                          th 'allow-fallback))
+            pr-review--pending-review-threads))
     (if section-id
         (pr-review--goto-section-with-value section-id)
       (goto-char (point-min)))
     (apply 'message "PR %s/%s/%s loaded" pr-review--pr-path)))
 
-(defun pr-review-refresh (&optional force)
+(defun pr-review-refresh (&optional clear-pending-reviews)
   "Fetch and reload current PrReview buffer,
-if FORCE is nil, ask confirmation when there's pending reviews."
+if CLEAR-PENDING-REVIEWS is not nil, delete pending reviews if any,
+otherwise, ask interactively."
   (interactive)
-  (when (or (null pr-review--pending-review-threads)
-            force
-            (yes-or-no-p "Pending review threads exist in current buffer, really refresh? "))
-    (pr-review--refresh-internal)))
+  (when (and pr-review--pending-review-threads
+             (or clear-pending-reviews
+                 (not (yes-or-no-p "Keep pending review threads (may not work if the changes are updated)? "))))
+    (setq-local pr-review--pending-review-threads nil))
+  (pr-review--refresh-internal))
 
 ;;;###autoload
 (defun pr-review-url-parse (url)

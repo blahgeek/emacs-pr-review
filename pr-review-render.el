@@ -238,11 +238,14 @@ return t on success."
     (goto-char (prop-match-beginning match))
     t))
 
-(defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread)
+(defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread &optional allow-fallback)
+  "If ALLOW-FALLBACK is non-nil, when the line for the thread cannot be found,
+it will be inserted at the beginning."
   (save-excursion
     (let (beg end)
       (let-alist pending-review-thread
-        (when (pr-review--goto-diff-line .path .side .line)
+        (when (or (pr-review--goto-diff-line .path .side .line)
+                  allow-fallback)
           (forward-line)
           (setq beg (point))
           (insert (propertize (concat "> PENDING comment for "
