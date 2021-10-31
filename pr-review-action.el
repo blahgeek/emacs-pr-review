@@ -33,15 +33,23 @@
 
 (declare-function pr-review-refresh "pr-review")
 
+(defun pr-review--insert-quoted-content (body)
+  (when body
+    (insert (replace-regexp-in-string "^" "> " body)
+            "\n")))
+
 (defun pr-review-reply-to-thread (&rest _)
   "Reply to current thread."
   (interactive)
-  (when-let ((section (magit-current-section)))
+  (let ((section (magit-current-section))
+        reply-content)
     (when (pr-review--review-thread-item-section-p section)
-      (setq section (oref section parent)))
+      (setq reply-content (oref section body)
+            section (oref section parent)))
     (when (pr-review--review-thread-section-p section)
       (pr-review--open-input-buffer
-       "Reply to thread." nil
+       "Reply to thread."
+       (apply-partially 'pr-review--insert-quoted-content reply-content)
        (apply-partially 'pr-review--post-review-comment-reply
                         (alist-get 'id pr-review--pr-info)
                         (oref section top-comment-id))
@@ -74,7 +82,7 @@
       (setq reply-content (oref section body)))
     (pr-review--open-input-buffer
      "Comment to PR."
-     (lambda () (when reply-content (insert "> " reply-content)))
+     (apply-partially 'pr-review--insert-quoted-content reply-content)
      (apply-partially 'pr-review--post-comment
                       (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))

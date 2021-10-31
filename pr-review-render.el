@@ -524,16 +524,18 @@ return t on success."
     (let-alist pr
       (insert (propertize .baseRefName 'face 'pr-review-branch-face)
               " <- "
-              (propertize .headRefName 'face 'pr-review-branch-face)
-              "  "
-              (mapconcat (lambda (label)
-                           (propertize (alist-get 'name label)
-                                       'face
-                                       `(:background ,(concat "#" (alist-get 'color label))
-                                         :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
-                                         :inherit pr-review-label-face)))
-                         .labels.nodes " ")
-              "\n")
+              (propertize .headRefName 'face 'pr-review-branch-face))
+      (when .labels.nodes
+        (insert
+         "  "
+         (mapconcat (lambda (label)
+                      (propertize (alist-get 'name label)
+                                  'face
+                                  `(:background ,(concat "#" (alist-get 'color label))
+                                                :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
+                                                :inherit pr-review-label-face)))
+                    .labels.nodes " ")))
+      (insert "\n")
       (insert (pr-review--propertize-keyword .state)
               (if (equal .state "OPEN")
                   (concat " - " (pr-review--propertize-keyword .mergeable))
@@ -575,11 +577,16 @@ return t on success."
                   (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
                   (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
       (pr-review--insert-diff diff)
-      (insert "\n")
+      (insert "\n"
+              "Review Changes with:")
       (dolist (event '("COMMENT" "APPROVE" "REQUEST_CHANGES"))
+        (insert " ")
         (insert-button event 'face 'pr-review-button-face
-                       'action (lambda (_) (pr-review-submit-review event)))
-        (insert " ")))
+                       'action (lambda (_) (pr-review-submit-review event))))
+      (insert ", or ")
+      (insert-button "COMMENT ONLY" 'face 'pr-review-button-face
+                     'action (lambda (_) (pr-review-comment)))
+      (insert "\n"))
     (mapc 'pr-review--insert-in-diff-review-thread-link
           (let-alist pr .reviewThreads.nodes))))
 

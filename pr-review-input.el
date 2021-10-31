@@ -40,7 +40,9 @@
 
 (define-minor-mode pr-review-input-mode
   "Minor mode for PR Review comment input buffer."
-  :lighter " PrReviewCommentInput")
+  :lighter " PrReviewCommentInput"
+  :interactive nil
+  (setq-local truncate-lines nil))
 
 (defun pr-review-input-abort ()
   "Abort current comment input buffer, discard content."
@@ -80,7 +82,7 @@ both callbacks are called inside the comment buffer,
 if REFRESH-AFTER-EXIT is not nil,
 refresh the current pr-review buffer after exit."
   (let ((marker (point-marker)))
-    (with-current-buffer (generate-new-buffer "*pr-review comment input*")
+    (with-current-buffer (generate-new-buffer "*pr-review input*")
       (gfm-mode)
       (pr-review-input-mode)
 
