@@ -24,6 +24,7 @@
 
 ;;; Code:
 
+(require 'pr-review-api)
 (require 'markdown-mode)
 
 (defvar-local pr-review--input-saved-window-config nil)
@@ -36,6 +37,7 @@
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-c\C-c" 'pr-review-input-exit)
     (define-key map "\C-c\C-k" 'pr-review-input-abort)
+    (define-key map (kbd "C-c @") 'pr-review-input-mention-user)
     map))
 
 (define-minor-mode pr-review-input-mode
@@ -53,6 +55,16 @@
     (when saved-window-config
       (unwind-protect
           (set-window-configuration saved-window-config)))))
+
+(defun pr-review-input-mention-user ()
+  "Insert @XXX at current point to mention an user."
+  (interactive)
+  (let ((user (completing-read
+               "Mention user: "
+               (mapcar (lambda (u) (alist-get 'login u))
+                       (pr-review--get-assignable-users))
+               nil 'require-match)))
+    (insert "@" user " ")))
 
 (declare-function pr-review-refresh "pr-review")
 (defun pr-review-input-exit ()
@@ -81,7 +93,8 @@ EXIT-CALLBACK is called when the buffer is exit (not abort),
 both callbacks are called inside the comment buffer,
 if REFRESH-AFTER-EXIT is not nil,
 refresh the current pr-review buffer after exit."
-  (let ((marker (point-marker)))
+  (let ((marker (point-marker))
+        (pr-path pr-review--pr-path))
     (with-current-buffer (generate-new-buffer "*pr-review input*")
       (gfm-mode)
       (pr-review-input-mode)
@@ -95,7 +108,9 @@ refresh the current pr-review buffer after exit."
        pr-review--input-exit-callback exit-callback
        pr-review--input-refresh-after-exit refresh-after-exit
        pr-review--input-prev-marker marker
-       pr-review--input-allow-empty allow-empty)
+       pr-review--input-allow-empty allow-empty
+       ;; for get-assignable-users
+       pr-review--pr-path pr-path)
 
       (when open-callback
         (funcall open-callback))
