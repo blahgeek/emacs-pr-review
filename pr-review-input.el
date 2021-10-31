@@ -40,16 +40,16 @@
     (define-key map (kbd "C-c @") 'pr-review-input-mention-user)
     map))
 
-(define-minor-mode pr-review-input-mode
-  "Minor mode for PR Review comment input buffer."
-  :lighter " PrReviewCommentInput"
+(define-derived-mode pr-review-input-mode gfm-mode "PrReviewInput"
   :interactive nil
+  :group 'pr-review
+  (use-local-map pr-review-input-mode-map)
   (setq-local truncate-lines nil))
 
 (defun pr-review-input-abort ()
   "Abort current comment input buffer, discard content."
   (interactive)
-  (unless pr-review-input-mode (error "Invalid mode"))
+  (unless (eq major-mode 'pr-review-input-mode) (error "Invalid mode"))
   (let ((saved-window-config pr-review--input-saved-window-config))
     (kill-buffer)
     (when saved-window-config
@@ -70,7 +70,7 @@
 (defun pr-review-input-exit ()
   "Apply content and exit current comment input buffer."
   (interactive)
-  (unless pr-review-input-mode (error "Invalid mode"))
+  (unless (eq major-mode 'pr-review-input-mode) (error "Invalid mode"))
   (let ((content (buffer-substring-no-properties (point-min) (point-max))))
     (when (and pr-review--input-exit-callback
                (or pr-review--input-allow-empty
@@ -96,7 +96,6 @@ refresh the current pr-review buffer after exit."
   (let ((marker (point-marker))
         (pr-path pr-review--pr-path))
     (with-current-buffer (generate-new-buffer "*pr-review input*")
-      (gfm-mode)
       (pr-review-input-mode)
 
       (setq-local
