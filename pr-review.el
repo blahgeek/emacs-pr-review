@@ -103,6 +103,9 @@
   (setq pr-review--current-show-level 1)
   (magit-section-show-level -1))
 
+(defun pr-review--eldoc-function (&rest _)
+  (get-text-property (point) 'pr-review-eldoc-content))
+
 (define-derived-mode pr-review-mode magit-section-mode "PrReview"
   :interactive nil
   :group 'pr-review
@@ -111,8 +114,8 @@
               magit-file-section-map nil
               magit-diff-highlight-hunk-body nil)
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
-
-  )
+  (add-hook 'eldoc-documentation-functions #'pr-review--eldoc-function nil t)
+  (eldoc-mode))
 
 (defun pr-review--refresh-internal ()
   "Fetch and reload current PrReview buffer."

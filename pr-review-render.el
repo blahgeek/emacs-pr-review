@@ -284,7 +284,11 @@ it will be inserted at the beginning."
                      ", ")
                     (when .isResolved " - RESOLVED")
                     "  ")
-            'face 'pr-review-in-diff-thread-title-face))
+            'face 'pr-review-in-diff-thread-title-face
+            'pr-review-eldoc-content (let-alist (car .comments.nodes)
+                                       (concat (propertize (concat "@" .author.login)
+                                                           'face 'pr-review-author-face)
+                                               ": " .body))))
           (insert-button
            "Go to thread"
            'face 'pr-review-button-face
