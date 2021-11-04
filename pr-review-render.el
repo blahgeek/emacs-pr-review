@@ -260,10 +260,7 @@ it will be inserted at the beginning."
       (when beg
         (add-text-properties
          beg end
-         (list
-          'pr-review-pending-review-thread pending-review-thread
-          'pr-review-pending-review-beg beg
-          'pr-review-pending-review-end end))))))
+         (list 'pr-review-pending-review-thread pending-review-thread))))))
 
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."

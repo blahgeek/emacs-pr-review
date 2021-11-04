@@ -153,9 +153,9 @@ When a region is active, the review thread is added for multiple lines."
 (defun pr-review-edit-pending-review-thread ()
   "Edit pending review thread under current point."
   (interactive)
-  (when-let ((review-thread (get-text-property (point) 'pr-review-pending-review-thread))
-             (beg (get-text-property (point) 'pr-review-pending-review-beg))
-             (end (get-text-property (point) 'pr-review-pending-review-end)))
+  (when-let* ((review-thread (get-text-property (point) 'pr-review-pending-review-thread))
+              (end (next-single-property-change (point) 'pr-review-pending-review-thread))
+              (beg (previous-single-property-change end 'pr-review-pending-review-thread)))
     (let ((inhibit-read-only t))
       (delete-region beg end))
     (setq-local pr-review--pending-review-threads
