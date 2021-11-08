@@ -422,6 +422,14 @@ it will be inserted at the beginning."
                          (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
                          " - "
                          (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
+        ("HeadRefForcePushedEvent" (magit-insert-heading
+                                     (propertize "* Force pushed" 'face 'magit-section-heading)
+                                     (propertize " by " 'face 'magit-section-heading)
+                                     (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
+                                     " - "
+                                     .beforeCommit.abbreviatedOid " -> " .afterCommit.abbreviatedOid
+                                     " - "
+                                     (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
         ))
     (insert "\n")))
 

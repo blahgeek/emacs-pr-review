@@ -167,7 +167,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
 
-      timelineItems(first: 100, itemTypes: [MERGED_EVENT, CLOSED_EVENT]) {
+      timelineItems(first: 100, itemTypes: [MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT]) {
         nodes {
           __typename
           ... on MergedEvent {
@@ -183,6 +183,19 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             createdAt
             actor {
               login
+            }
+          }
+          ... on HeadRefForcePushedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+            beforeCommit {
+              abbreviatedOid
+            }
+            afterCommit {
+              abbreviatedOid
             }
           }
         }
