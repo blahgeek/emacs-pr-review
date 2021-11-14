@@ -418,6 +418,12 @@ it will be inserted at the beginning."
                    (pr-review--propertize-username (or .assignee.login ""))
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
+                 ("UnassignedEvent"
+                  (list
+                   (propertize "Unassigned to " 'face 'magit-section-heading)
+                   (pr-review--propertize-username (or .assignee.login ""))
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
                  ("ReviewRequestedEvent"
                   (list
                    (propertize "Requested review from " 'face 'magit-section-heading)

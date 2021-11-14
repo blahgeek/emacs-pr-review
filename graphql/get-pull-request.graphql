@@ -167,10 +167,22 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
 
-      timelineItems(first: 100, itemTypes: [ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT]) {
+      timelineItems(first: 100, itemTypes: [ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT, UNASSIGNED_EVENT]) {
         nodes {
           __typename
           ... on AssignedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+            assignee {
+              ... on User {
+                login
+              }
+            }
+          }
+          ... on UnassignedEvent {
             id
             createdAt
             actor {
