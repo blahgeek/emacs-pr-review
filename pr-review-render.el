@@ -44,9 +44,11 @@
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
 
 (defun pr-review--propertize-username (username)
+  "Format and propertize USERNAME."
   (propertize (concat "@" username) 'face 'pr-review-author-face))
 
 (defun pr-review--propertize-keyword (str)
+  "Propertize keyword STR with optional face."
   (propertize str 'face
               (cond
                ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
@@ -59,18 +61,20 @@
                 'pr-review-state-face))))
 
 (defun pr-review--insert-link (title url)
+  "Insert a link URL with TITLE."
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
 (defun pr-review--dom-string (dom)
+  "Return string of DOM."
   (mapconcat (lambda (sub)
                (if (stringp sub)
                    sub
                  (pr-review--dom-string sub)))
-             (dom-children dom)))
+             (dom-children dom) ""))
 
 (defun pr-review--shr-tag-div (dom)
-  "Function for rendering div tag in shr, special handle for suggested-changes."
+  "Function for rendering div tag as DOM in shr, special handle for suggested-changes."
   (if (not (string-match-p ".*suggested-changes.*" (or (dom-attr dom 'class) "")))
       (shr-tag-div dom)
     (let ((tbody (dom-by-tag dom 'tbody)))
@@ -98,6 +102,9 @@
               (shr-generic td)))))))))
 
 (defun pr-review--insert-html (body &optional indent)
+  "Insert html content BODY.
+INDENT is an optional number, if provided,
+INDENT count of spaces are added at the start of every line."
   (let ((shr-indentation (* (or indent 0) pr-review--char-pixel-width))
         (shr-external-rendering-functions '((div . pr-review--shr-tag-div)))
         (start (point))
@@ -127,6 +134,9 @@
           (forward-line))))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
+  "Fontify content BODY as LANG-MODE, return propertized string.
+MARGIN is an optional number, if provided,
+MARGIN count of spaces are added at the start of every line."
   (with-current-buffer
       (get-buffer-create (format " *pr-review-fontification:%s*" lang-mode))
     (let ((inhibit-modification-hooks nil)
@@ -134,7 +144,7 @@
       (erase-buffer)
       (insert "\n"  ;; insert a newline at first line (and ignore later)
                     ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
-              (string-replace "\r\n" "\n" body)
+              (replace-regexp-in-string "\r\n" "\n" body nil t)
               " \n")
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
@@ -168,10 +178,12 @@
 
 
 (defun pr-review--insert-fontified (body lang-mode &optional margin)
+  "Fontify BODY as LANG-MODE with MARGIN and insert it, see `pr-review--fontify'."
   (insert (pr-review--fontify body lang-mode margin)))
 
 
 (defun pr-review--insert-diff (diff)
+  "Insert pull request diff DIFF, wash it using magit."
   (let ((beg (point)))
     (setq-local pr-review--diff-begin-point beg)
 
@@ -179,7 +191,7 @@
         (insert (propertize "Diff not available\n" 'face 'pr-review-error-state-face))
       (pr-review--insert-fontified diff 'diff-mode)
       (goto-char beg)
-      (magit-wash-sequence (apply-partially 'magit-diff-wash-diff '())))
+      (magit-wash-sequence (apply-partially #'magit-diff-wash-diff '())))
 
     (goto-char beg)
     (forward-line -1)
@@ -209,11 +221,10 @@
           (when (cdr current-left-right)
             (add-text-properties
              (point) (1+ (point))
-             `(pr-review-diff-line-right ,(cons filename (cdr current-left-right)))))
-          )))))
+             `(pr-review-diff-line-right ,(cons filename (cdr current-left-right))))))))))
 
 (defun pr-review--find-section-with-value (value)
-  "Find and return the magit-section object matching VALUE."
+  "Find and return the magit section object matching VALUE."
   (save-excursion
     (goto-char (point-min))
     (when-let ((match (text-property-search-forward
@@ -224,11 +235,12 @@
       (get-text-property (prop-match-beginning match) 'magit-section))))
 
 (defun pr-review--goto-section-with-value (value)
+  "Go to the magit section object matching VALUE."
   (when-let ((section (pr-review--find-section-with-value value)))
     (goto-char (oref section start))))
 
 (defun pr-review--goto-diff-line (filepath diffside line)
-  "Goto diff line for FILEPATH, DIFFSIDE (string, left or right) and LINE,
+  "Goto diff line for FILEPATH, DIFFSIDE (string, left or right) and LINE.
 return t on success."
   (goto-char pr-review--diff-begin-point)
   (when-let ((match (text-property-search-forward
@@ -244,8 +256,9 @@ return t on success."
     t))
 
 (defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread &optional allow-fallback)
-  "If ALLOW-FALLBACK is non-nil, when the line for the thread cannot be found,
-it will be inserted at the beginning."
+  "Insert a pending review thread inside the diff for PENDING-REVIEW-THREAD.
+If ALLOW-FALLBACK is non-nil, when the line for the thread cannot be found.
+It will be inserted at the beginning."
   (save-excursion
     (let (beg end)
       (let-alist pending-review-thread
@@ -299,6 +312,7 @@ it will be inserted at the beginning."
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
+  "Insert review thread section with TOP-COMMENT and REVIEW-THREAD."
   (magit-insert-section section (pr-review--review-thread-section
                                  (alist-get 'id review-thread)
                                  (eq t (alist-get 'isCollapsed review-thread)))
@@ -363,6 +377,7 @@ it will be inserted at the beginning."
     (insert "\n\n")))
 
 (defun pr-review--insert-review-section (review top-comment-id-to-review-thread)
+  "Insert review section for REVIEW and mapping TOP-COMMENT-ID-TO-REVIEW-THREAD."
   (let* ((review-comments (let-alist review .comments.nodes))
          (top-comment-and-review-thread-list
           (delq nil (mapcar (lambda (cmt)
@@ -388,11 +403,12 @@ it will be inserted at the beginning."
             (pr-review--insert-html .bodyHTML))
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
-            (apply 'pr-review--insert-review-thread-section top-comment-and-review-thread))
+            (apply #'pr-review--insert-review-thread-section top-comment-and-review-thread))
           (when top-comment-and-review-thread-list
             (insert "\n")))))))
 
 (defun pr-review--insert-comment-section (cmt)
+  "Insert comment section with comment CMT."
   (let-alist cmt
     (magit-insert-section section (pr-review--comment-section .id)
       (oset section updatable .viewerCanUpdate)
@@ -406,6 +422,7 @@ it will be inserted at the beginning."
       (insert "\n"))))
 
 (defun pr-review--insert-event-section (event)
+  "Insert event section with EVENT."
   (let-alist event
     (magit-insert-section (pr-review--event-section .id 'hide)
       (magit-insert-heading
@@ -470,11 +487,11 @@ it will be inserted at the beginning."
         (when .createdAt
           (concat
            " - "
-           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
-           ))))
+           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))))
     (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
+  "Insert reviewers info for PR-INFO."
   (let ((groups (make-hash-table :test 'equal)))
     (let ((review-requests (let-alist pr-info .reviewRequests.nodes)))
       (puthash "PENDING" (mapcar (lambda (review-request)
@@ -499,6 +516,7 @@ it will be inserted at the beginning."
              groups)))
 
 (defun pr-review--insert-assignees-info (pr-info)
+  "Insert assignees info for PR-INFO."
   (let-alist pr-info
     (when .assignees.nodes
       (insert (pr-review--propertize-keyword "ASSIGNED")
@@ -508,6 +526,7 @@ it will be inserted at the beginning."
               "\n"))))
 
 (defun pr-review--insert-commit-section (commits)
+  "Insert commit section for a list of COMMITS."
   (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
     (magit-insert-heading (format "%d Commits" (length commits)))
     (mapc (lambda (commit)
@@ -521,6 +540,7 @@ it will be inserted at the beginning."
           commits)))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
+  "Insert check section for STATUS-CHECK-ROLLUP and REQUIRED-CONTEXTS."
   (magit-insert-section (pr-review--check-section 'check-section-id)
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
                                   (pr-review--propertize-keyword
@@ -564,6 +584,7 @@ it will be inserted at the beginning."
     (insert "\n")))
 
 (defun pr-review--build-top-comment-id-to-review-thread-map (pr)
+  "Build mapping top-comment-id -> review-thread for PR."
   (let ((res (make-hash-table :test 'equal)))
     (mapc (lambda (review-thread)
             (let* ((comments (let-alist review-thread .comments.nodes))
@@ -574,6 +595,7 @@ it will be inserted at the beginning."
     res))
 
 (defun pr-review--get-label-foreground (background-hex)
+  "Get the foreground color hex for label based on its BACKGROUND-HEX."
   (when (string-match (rx bol
                           (group (= 2 (any xdigit)))
                           (group (= 2 (any xdigit)))
@@ -588,6 +610,7 @@ it will be inserted at the beginning."
         "#ffffff"))))
 
 (defun pr-review--insert-pr-body (pr diff)
+  "Insert main body of PR with DIFF."
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
         (timeline-items
@@ -676,6 +699,7 @@ it will be inserted at the beginning."
           (let-alist pr .reviewThreads.nodes))))
 
 (defun pr-review--insert-pr (pr diff)
+  "Insert pr buffer with PR and DIFF."
   (setq pr-review--char-pixel-width (shr-string-pixel-width "-"))
   (magit-insert-section section (pr-review--root-section)
     (let-alist pr

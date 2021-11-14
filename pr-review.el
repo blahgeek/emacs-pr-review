@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Review github PR in emacs.
+;; Review github PR in EMACS.
 
 ;;; Code:
 
@@ -34,6 +34,7 @@
 (require 'pr-review-action)
 
 (defun pr-review--confirm-kill-buffer ()
+  "Hook for `kill-buffer-query-functions', confirm if there's pending reviews."
   (or (null pr-review--pending-review-threads)
       (yes-or-no-p "Pending review threads exist in current buffer, really exit? ")))
 
@@ -79,28 +80,37 @@
 (defvar-local pr-review--current-show-level 3)
 
 (defun pr-review-increase-show-level ()
+  "Increase the level of showing sections in current buffer.
+Also see `magit-section-show-level'."
   (interactive)
   (when (< pr-review--current-show-level 4)
     (setq pr-review--current-show-level (1+ pr-review--current-show-level)))
   (magit-section-show-level (- pr-review--current-show-level)))
 
 (defun pr-review-decrease-show-level ()
+  "Decrease the level of showing sections in current buffer.
+Also see `magit-section-show-level'."
   (interactive)
   (when (> pr-review--current-show-level 1)
     (setq pr-review--current-show-level (1- pr-review--current-show-level)))
   (magit-section-show-level (- pr-review--current-show-level)))
 
 (defun pr-review-maximize-show-level ()
+  "Set the level of showing sections to maximum in current buffer.
+Which means that all sections are expanded."
   (interactive)
   (setq pr-review--current-show-level 4)
   (magit-section-show-level -4))
 
 (defun pr-review-minimize-show-level ()
+  "Set the level of showing sections to minimum in current buffer.
+Which means that all sections are collapsed."
   (interactive)
   (setq pr-review--current-show-level 1)
   (magit-section-show-level -1))
 
 (defun pr-review--eldoc-function (&rest _)
+  "Hook for `eldoc-documentation-function', return content at current point."
   (get-text-property (point) 'pr-review-eldoc-content))
 
 (define-derived-mode pr-review-mode magit-section-mode "PrReview"
@@ -134,11 +144,11 @@
     (if section-id
         (pr-review--goto-section-with-value section-id)
       (goto-char (point-min)))
-    (apply 'message "PR %s/%s/%s loaded" pr-review--pr-path)))
+    (apply #'message "PR %s/%s/%s loaded" pr-review--pr-path)))
 
 (defun pr-review-refresh (&optional clear-pending-reviews)
-  "Fetch and reload current PrReview buffer,
-if CLEAR-PENDING-REVIEWS is not nil, delete pending reviews if any,
+  "Fetch and reload current PrReview buffer.
+If CLEAR-PENDING-REVIEWS is not nil, delete pending reviews if any,
 otherwise, ask interactively."
   (interactive)
   (when (and pr-review--pending-review-threads
@@ -188,7 +198,7 @@ Used by the default value of `pr-review'."
    (let* ((default-pr-path (pr-review--pr-path-at-point))
           (input-url (read-string (concat "URL to review"
                                           (when default-pr-path
-                                            (apply 'format " (default: %s/%s/%s)"
+                                            (apply #'format " (default: %s/%s/%s)"
                                                    default-pr-path))
                                           ":")))
           (res (or (pr-review-url-parse input-url)
@@ -202,7 +212,7 @@ Used by the default value of `pr-review'."
 
 ;;;###autoload
 (defun pr-review (repo-owner repo-name pr-id &optional new-window)
-  "Open pr-review for REPO-OWNER/REPO-NAME PR-ID (number).
+  "Open review buffer for REPO-OWNER/REPO-NAME PR-ID (number).
 Open in current window if NEW-WINDOW is nil, in other window otherwise.
 When called interactively, user will be prompted to enter a PR url
 and new window will be used when called with prefix."
@@ -220,19 +230,20 @@ and new window will be used when called with prefix."
 
 ;;;###autoload
 (defun pr-review-open-url (url &optional new-window &rest _)
-  "Open URL (which is a link to github pr) using pr-review.
+  "Open URL (which is a link to github pr) using `pr-review'.
+If NEW-WINDOW is not nil, open it in a new window.
 Works like `pr-review' but accepts URL, can be used in `browse-url-handlers'."
   (let ((res (pr-review-url-parse url)))
     (if (not res)
         (message "Cannot parse URL %s" url)
-      (apply 'pr-review (append res (list new-window))))))
+      (apply #'pr-review (append res (list new-window))))))
 
 
 ;;;###autoload
 (defun pr-review-search-open (query)
-  "Search PRs using a custom query and open one of them.
-See github docs for syntax of the query.
-When called interactively, you will be asked to enter the query."
+  "Search PRs using a custom QUERY and open one of them.
+See github docs for syntax of QUERY.
+When called interactively, you will be asked to enter the QUERY."
   (interactive (list (read-string "Search GitHub> "
                                   "type:pr sort:updated author:@me state:open")))
   (let* ((prs (pr-review--search-prs query))

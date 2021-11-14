@@ -87,12 +87,13 @@
         (goto-char prev-pos)))))
 
 (defun pr-review--open-input-buffer (description open-callback exit-callback &optional refresh-after-exit allow-empty)
-  "Open a comment buffer for user input with DESCRIPTION,
+  "Open a comment buffer for user input with DESCRIPTION.
 OPEN-CALLBACK is called when the buffer is opened,
 EXIT-CALLBACK is called when the buffer is exit (not abort),
 both callbacks are called inside the comment buffer,
 if REFRESH-AFTER-EXIT is not nil,
-refresh the current pr-review buffer after exit."
+refresh the current `pr-review' buffer after exit.
+If ALLOW-EMPTY is not nil, empty body is also considered a valid result."
   (let ((marker (point-marker))
         (pr-path pr-review--pr-path))
     (with-current-buffer (generate-new-buffer "*pr-review input*")
@@ -114,7 +115,9 @@ refresh the current pr-review buffer after exit."
       (when open-callback
         (funcall open-callback))
 
-      (replace-string-in-region "\r\n" "\n" (point-min) (point-max))
+      (goto-char (point-min))
+      (while (search-forward "\r\n" nil t)
+        (replace-match "\n" nil t))
       (switch-to-buffer-other-window (current-buffer)))))
 
 

@@ -34,6 +34,7 @@
 (declare-function pr-review-refresh "pr-review")
 
 (defun pr-review--insert-quoted-content (body)
+  "Insert BODY as quoted in markdown format."
   (when body
     (insert (replace-regexp-in-string "^" "> " body)
             "\n")))
@@ -49,8 +50,8 @@
     (when (pr-review--review-thread-section-p section)
       (pr-review--open-input-buffer
        "Reply to thread."
-       (apply-partially 'pr-review--insert-quoted-content reply-content)
-       (apply-partially 'pr-review--post-review-comment-reply
+       (apply-partially #'pr-review--insert-quoted-content reply-content)
+       (apply-partially #'pr-review--post-review-comment-reply
                         (alist-get 'id pr-review--pr-info)
                         (oref section top-comment-id))
        'refresh-after-exit))))
@@ -82,8 +83,8 @@
       (setq reply-content (oref section body)))
     (pr-review--open-input-buffer
      "Comment to PR."
-     (apply-partially 'pr-review--insert-quoted-content reply-content)
-     (apply-partially 'pr-review--post-comment
+     (apply-partially #'pr-review--insert-quoted-content reply-content)
+     (apply-partially #'pr-review--post-comment
                       (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
@@ -104,6 +105,10 @@
 (declare-function pr-review--insert-in-diff-pending-review-thread "pr-review-render")
 
 (defun pr-review--add-pending-review-thread-exit-callback (orig-buffer review-thread body)
+  "Exit callback for adding pending review thread.
+ORIG-BUFFER is the original pr review buffer;
+REVIEW-THREAD is the related thread;
+BODY is the result text user entered."
   (setf (alist-get 'body review-thread) body)
   (when (buffer-live-p orig-buffer)
     (with-current-buffer orig-buffer
@@ -145,7 +150,7 @@ When a region is active, the review thread is added for multiple lines."
          (lambda ()
            (insert "```suggestion\n" region-text "```")
            (goto-char (point-min))))
-       (apply-partially 'pr-review--add-pending-review-thread-exit-callback
+       (apply-partially #'pr-review--add-pending-review-thread-exit-callback
                         (current-buffer)
                         review-thread))
       t)))
@@ -165,7 +170,7 @@ When a region is active, the review thread is added for multiple lines."
      (lambda ()
        (insert (alist-get 'body review-thread))
        (goto-char (point-min)))
-     (apply-partially 'pr-review--add-pending-review-thread-exit-callback
+     (apply-partially #'pr-review--add-pending-review-thread-exit-callback
                       (current-buffer)
                       review-thread))
     t))
@@ -177,6 +182,10 @@ When a region is active, the review thread is added for multiple lines."
       (pr-review-add-pending-review-thread)))
 
 (defun pr-review--submit-review-exit-callback (orig-buffer event body)
+  "Exit callback for submitting reviews.
+ORIG-BUFFER is the original pr review buffer;
+EVENT is the review action user selected;
+BODY is the result text user entered."
   (when (buffer-live-p orig-buffer)
     (with-current-buffer orig-buffer
       (pr-review--post-review (alist-get 'id pr-review--pr-info)
@@ -195,7 +204,7 @@ When called interactively, user will be asked to choose an event."
   (pr-review--open-input-buffer
    (format "Submit review %s (%s threads)." event (length pr-review--pending-review-threads))
    nil
-   (apply-partially 'pr-review--submit-review-exit-callback
+   (apply-partially #'pr-review--submit-review-exit-callback
                     (current-buffer) event)
    'refresh-after-exit
    'allow-empty))
@@ -211,7 +220,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update comment."
      (lambda () (insert body))
-     (apply-partially 'pr-review--update-comment id)
+     (apply-partially #'pr-review--update-comment id)
      'refresh-after-exit)))
 
 (defun pr-review-edit-review ()
@@ -225,7 +234,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update review."
      (lambda () (insert body))
-     (apply-partially 'pr-review--update-review id)
+     (apply-partially #'pr-review--update-review id)
      'refresh-after-exit)))
 
 (defun pr-review-edit-review-comment ()
@@ -239,7 +248,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update review comment."
      (lambda () (insert body))
-     (apply-partially 'pr-review--update-review-comment id)
+     (apply-partially #'pr-review--update-review-comment id)
      'refresh-after-exit)))
 
 (defun pr-review-edit-pr-description ()
@@ -252,7 +261,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update PR description."
      (lambda () (insert body))
-     (apply-partially 'pr-review--update-pr-body (alist-get 'id pr-review--pr-info))
+     (apply-partially #'pr-review--update-pr-body (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
 (defun pr-review-edit-pr-title ()
@@ -265,7 +274,7 @@ When called interactively, user will be asked to choose an event."
     (pr-review--open-input-buffer
      "Update PR title."
      (lambda () (insert title))
-     (apply-partially 'pr-review--update-pr-title (alist-get 'id pr-review--pr-info))
+     (apply-partially #'pr-review--update-pr-title (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
 (defun pr-review-view-file ()
@@ -286,16 +295,18 @@ When called interactively, user will be asked to choose an event."
 (defun pr-review-open-in-default-browser ()
   "Open current PR in default browser."
   (interactive)
-  (browse-url-default-browser (apply 'format "https://github.com/%s/%s/pull/%s"
+  (browse-url-default-browser (apply #'format "https://github.com/%s/%s/pull/%s"
                                      pr-review--pr-path)))
 
 ;; general dispatching functions, call other functions based on current context
 
 (defun pr-review--review-thread-context-p (section)
+  "Check whether SECTION is a review thread (or its children)."
   (or (pr-review--review-thread-section-p section)
       (pr-review--review-thread-item-section-p section)))
 
 (defun pr-review--diff-context-p (section)
+  "Check whether SECTION is a diff section (or its children)."
   (or (pr-review--diff-section-p section)
       (magit-hunk-section-p section)
       (magit-file-section-p section)
@@ -369,7 +380,7 @@ When called interactively, user can select filepath from list."
     (goto-char (oref section start))))
 
 (defun pr-review-request-reviews (reviewer-logins)
-  "Request reviewers for current PR, with a list of reviewer's logins.
+  "Request reviewers for current PR, with a list of usernames REVIEWER-LOGINS.
 This will override all existing reviewers (will clear all reviewers on empty).
 When called interactively, user can select reviewers from list."
   (interactive

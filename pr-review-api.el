@@ -28,17 +28,17 @@
 (require 'ghub)
 
 (defcustom pr-review-ghub-auth-name 'emacs-pr-review
-  "Ghub auth name used by pr-review, see `ghub-request' for details."
+  "Ghub auth name used by `pr-review', see `ghub-request' for details."
   :type 'symbol
   :group 'pr-review)
 
 (defcustom pr-review-ghub-username nil
-  "Ghub username used by pr-review, see `ghub-request' for details."
+  "Ghub username used by `pr-review', see `ghub-request' for details."
   :type '(choice (const :tag "Read from config" nil)
                  (string :tag "Username value"))
   :group 'pr-review)
 
-(defvar pr-review--bin-dir (file-name-directory load-file-name))
+(defvar pr-review--bin-dir (file-name-directory (or load-file-name buffer-file-name)))
 
 (defun pr-review--get-graphql (name)
   "Get graphql content for NAME (symbol), cached."
@@ -48,6 +48,7 @@
     (buffer-substring-no-properties (point-min) (point-max))))
 
 (defun pr-review--execute-graphql (name variables)
+  "Execute graphql from file NAME.graphql with VARIABLES, return result."
   (let ((res (ghub-graphql (pr-review--get-graphql name)
                            variables
                            :auth pr-review-ghub-auth-name
@@ -61,6 +62,7 @@
       .data)))
 
 (defun pr-review--fetch-pr-info ()
+  "Fetch pr info based on current buffer's local variable."
   (pcase-let ((`(,repo-owner ,repo-name ,pr-id) pr-review--pr-path))
     (let-alist (pr-review--execute-graphql
                 'get-pull-request
@@ -72,6 +74,8 @@
       .repository.pullRequest)))
 
 (defun pr-review--fetch-compare (base-ref head-ref)
+  "Fetch git diff from BASE-REF to HEAD-REF for current buffer.
+Also fix the result so that it looks like result of git diff --no-prefix."
   (when-let* ((repo-owner (car pr-review--pr-path))
               (repo-name (cadr pr-review--pr-path))
               ;; res may be nil (if the ref is deleted)
@@ -100,6 +104,8 @@
 (defvar-local pr-review--compare-cache-refs nil)
 (defvar-local pr-review--compare-cache-result nil)
 (defun pr-review--fetch-compare-cached (base-ref head-ref)
+  "Fetch git diff from BASE-REF to HEAD-REF.
+Same as `pr-review--fetch-compare', but cached in buffer variable."
   (unless (and pr-review--compare-cache-result
                (equal pr-review--compare-cache-refs (cons base-ref head-ref)))
     (when-let ((res (pr-review--fetch-compare base-ref head-ref)))
@@ -109,6 +115,8 @@
 
 
 (defun pr-review--fetch-file (filepath head-or-base)
+  "Fetch file content for FILEPATH for current review buffer.
+If HEAD-OR-BASE is t, fetch the head version; otherwise base version."
   (let* ((repo-owner (car pr-review--pr-path))
          (repo-name (cadr pr-review--pr-path))
          (url (format "/repos/%s/%s/contents/%s" repo-owner repo-name filepath))
@@ -123,6 +131,7 @@
                   :username pr-review-ghub-username)))
 
 (defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
+  "Post review commit reply BODY to TOP-COMMENT-ID at PR-NODE-ID."
   (let (res review-id)
     (setq res (let-alist (pr-review--execute-graphql
                           'add-review-comment-reply
@@ -142,42 +151,54 @@
       (error "Error while submitting review comment reply"))))
 
 (defun pr-review--post-comment (pr-node-id body)
+  "Post comment BODY at pr PR-NODE-ID."
   (pr-review--execute-graphql 'add-comment
                               `((input . ((subjectId . ,pr-node-id)
                                           (body . ,body))))))
 
 (defun pr-review--update-comment (comment-id body)
+  "Update comment to BODY for COMMENT-ID."
   (pr-review--execute-graphql 'update-comment
                               `((input . ((id . ,comment-id)
                                           (body . ,body))))))
 
 (defun pr-review--update-review (review-id body)
+  "Update review to BODY for REVIEW-ID."
   (pr-review--execute-graphql 'update-review
                               `((input . ((pullRequestReviewId . ,review-id)
                                           (body . ,body))))))
 
 (defun pr-review--update-review-comment (review-comment-id body)
+  "Update review comment to BODY for REVIEW-COMMENT-ID."
   (pr-review--execute-graphql 'update-review-comment
                               `((input . ((pullRequestReviewCommentId . ,review-comment-id)
                                           (body . ,body))))))
 
 (defun pr-review--update-pr-body (pr-node-id body)
+  "Update pr description to BODY for PR-NODE-ID."
   (pr-review--execute-graphql 'update-pr
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (body . ,body))))))
 
 (defun pr-review--update-pr-title (pr-node-id title)
+  "Update pr title to TITLE for PR-NODE-ID."
   (pr-review--execute-graphql 'update-pr
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (title . ,title))))))
 
 (defun pr-review--post-resolve-review-thread (review-thread-id resolve-or-unresolve)
+  "Resolve or unresolve review thread REVIEW-THREAD-ID.
+If RESOLVE-OR-UNRESOLVE is non-nil, do resolve; otherwise do unresolve."
   (pr-review--execute-graphql (if resolve-or-unresolve
                                   'resolve-review-thread
                                 'unresolve-review-thread)
                               `((input . ((threadId . ,review-thread-id))))))
 
 (defun pr-review--post-review (pr-node-id commit-id event pending-threads body)
+  "Post review to PR-NODE-ID with commit COMMIT-ID.
+EVENT: review action, e.g. APPROVE;
+PENDING-THREADS: inline review threads;
+BODY: review comment body."
   (pr-review--execute-graphql
    'add-review
    `((input . ((body . ,body)
@@ -187,12 +208,14 @@
                (threads . ,pending-threads))))))
 
 (defun pr-review--search-prs (query)
+  "Search pull requests with QUERY."
   (let-alist (pr-review--execute-graphql
               'search-prs
               `((query . ,query)))
     .search.nodes))
 
 (defun pr-review--get-assignable-users-1 (repo-owner repo-name)
+  "Get a list of assignable users for REPO-OWNER/REPO-NAME."
   (let ((has-next-page t)
         cursor res)
     (while has-next-page
@@ -224,6 +247,7 @@ for current PR, cached."
       res)))
 
 (defun pr-review--post-request-reviews (pr-node-id user-node-ids)
+  "Request review from USER-NODE-IDS for PR-NODE-ID."
   (pr-review--execute-graphql 'request-reviews
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (userIds . ,user-node-ids))))))
