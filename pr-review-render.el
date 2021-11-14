@@ -43,6 +43,9 @@
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
 
+(defun pr-review--propertize-username (username)
+  (propertize (concat "@" username) 'face 'pr-review-author-face))
+
 (defun pr-review--propertize-keyword (str)
   (propertize str 'face
               (cond
@@ -285,8 +288,7 @@ it will be inserted at the beginning."
                     "  ")
             'face 'pr-review-in-diff-thread-title-face
             'pr-review-eldoc-content (let-alist (car .comments.nodes)
-                                       (concat (propertize (concat "@" .author.login)
-                                                           'face 'pr-review-author-face)
+                                       (concat (pr-review--propertize-username .author.login)
                                                ": " .body))))
           (insert-button
            "Go to thread"
@@ -341,8 +343,7 @@ it will be inserted at the beginning."
                 (oset item-section body .body)
                 (magit-insert-heading
                   (make-string (* 2 pr-review-section-indent-width) ?\s)
-                  (propertize (concat "@" .author.login)
-                              'face 'pr-review-author-face)
+                  (pr-review--propertize-username .author.login)
                   " - "
                   (propertize (pr-review--format-timestamp .createdAt)
                               'face 'pr-review-timestamp-face))
@@ -378,7 +379,7 @@ it will be inserted at the beginning."
           (oset section body .body)
           (magit-insert-heading
             (propertize "Reviewed by " 'face 'magit-section-heading)
-            (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
+            (pr-review--propertize-username .author.login)
             " - "
             (pr-review--propertize-keyword .state)
             " - "
@@ -398,7 +399,7 @@ it will be inserted at the beginning."
       (oset section body .body)
       (magit-insert-heading
         (propertize "Commented by " 'face 'magit-section-heading)
-        (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
+        (pr-review--propertize-username .author.login)
         " - "
         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
       (pr-review--insert-html .bodyHTML)
@@ -407,32 +408,37 @@ it will be inserted at the beginning."
 (defun pr-review--insert-event-section (event)
   (let-alist event
     (magit-insert-section (pr-review--event-section .id 'hide)
-      (pcase .__typename
-        ("MergedEvent" (magit-insert-heading
-                         (propertize "* " 'face 'magit-section-heading)
-                         (propertize "Merged" 'face 'pr-review-success-state-face)
-                         (propertize " into " 'face 'magit-section-heading)
-                         (propertize .mergeRefName 'face 'pr-review-branch-face)
-                         (propertize " by " 'face 'magit-section-heading)
-                         (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
-                         " - "
-                         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
-        ("ClosedEvent" (magit-insert-heading
-                         (propertize "* " 'face 'magit-section-heading)
-                         (propertize "Closed" 'face 'pr-review-error-state-face)
-                         (propertize " by " 'face 'magit-section-heading)
-                         (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
-                         " - "
-                         (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
-        ("HeadRefForcePushedEvent" (magit-insert-heading
-                                     (propertize "* Force pushed" 'face 'magit-section-heading)
-                                     (propertize " by " 'face 'magit-section-heading)
-                                     (propertize (concat "@" .actor.login) 'face 'pr-review-author-face)
-                                     " - "
-                                     .beforeCommit.abbreviatedOid " -> " .afterCommit.abbreviatedOid
-                                     " - "
-                                     (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
-        ))
+      (magit-insert-heading
+        (propertize "* " 'face 'magit-section-heading)
+        (apply #'concat
+               (pcase .__typename
+                 ("AssignedEvent"
+                  (list
+                   (propertize "Assigned to " 'face 'magit-section-heading)
+                   (pr-review--propertize-username (or .assignee.login ""))
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
+                 ("MergedEvent"
+                  (list
+                   (propertize "Merged" 'face 'pr-review-success-state-face)
+                   (propertize " into " 'face 'magit-section-heading)
+                   (propertize .mergeRefName 'face 'pr-review-branch-face)
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
+                 ("ClosedEvent"
+                  (list
+                   (propertize "Closed" 'face 'pr-review-error-state-face)
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
+                 ("HeadRefForcePushedEvent"
+                  (list
+                   (propertize "Force pushed" 'face 'magit-section-heading)
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)
+                   " - "
+                   .beforeCommit.abbreviatedOid " -> " .afterCommit.abbreviatedOid))))
+        " - "
+        (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
     (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -449,9 +455,7 @@ it will be inserted at the beginning."
     (maphash (lambda (status users)
                (insert (pr-review--propertize-keyword status)
                        ": "
-                       (mapconcat (lambda (user)
-                                    (propertize (concat "@" user) 'face 'pr-review-author-face))
-                                  users ", "))
+                       (mapconcat #'pr-review--propertize-username users ", "))
                (when (equal status "PENDING")
                  (insert " ")
                  (insert-button
@@ -460,6 +464,13 @@ it will be inserted at the beginning."
                   'action (lambda (_) (call-interactively 'pr-review-request-reviews))))
                (insert "\n"))
              groups)))
+
+(defun pr-review--insert-assignees-info (pr-info)
+  (insert (pr-review--propertize-keyword "ASSIGNED")
+          ": "
+          (mapconcat (lambda (assignee) (pr-review--propertize-username (alist-get 'login assignee)))
+                     (let-alist pr-info .assignees.nodes) ", ")
+          "\n"))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
   (magit-insert-section (pr-review--check-section 'check-section-id)
@@ -541,7 +552,9 @@ it will be inserted at the beginning."
                 (lambda (a b) (string< (alist-get 'createdAt (car a))
                                        (alist-get 'createdAt (car b))))))
     (let-alist pr
-      (insert (propertize .baseRefName 'face 'pr-review-branch-face)
+      (pr-review--insert-link .url .url)
+      (insert "\n"
+              (propertize .baseRefName 'face 'pr-review-branch-face)
               " <- "
               (propertize .headRefName 'face 'pr-review-branch-face))
       (when .labels.nodes
@@ -563,8 +576,9 @@ it will be inserted at the beginning."
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "
               (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
-              "\n")
+              "\n\n")
       (pr-review--insert-reviewers-info pr)
+      (pr-review--insert-assignees-info pr)
       (insert "\n")
       (magit-insert-section section (pr-review--description-section)
         (oset section body .body)
