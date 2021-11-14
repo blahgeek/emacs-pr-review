@@ -499,11 +499,13 @@ it will be inserted at the beginning."
              groups)))
 
 (defun pr-review--insert-assignees-info (pr-info)
-  (insert (pr-review--propertize-keyword "ASSIGNED")
-          ": "
-          (mapconcat (lambda (assignee) (pr-review--propertize-username (alist-get 'login assignee)))
-                     (let-alist pr-info .assignees.nodes) ", ")
-          "\n"))
+  (let-alist pr-info
+    (when .assignees.nodes
+      (insert (pr-review--propertize-keyword "ASSIGNED")
+              ": "
+              (mapconcat (lambda (assignee) (pr-review--propertize-username (alist-get 'login assignee)))
+                         .assignees.nodes ", ")
+              "\n"))))
 
 (defun pr-review--insert-commit-section (commits)
   (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
