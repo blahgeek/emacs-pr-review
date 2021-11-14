@@ -72,17 +72,19 @@
       .repository.pullRequest)))
 
 (defun pr-review--fetch-compare (base-ref head-ref)
-  (let* ((repo-owner (car pr-review--pr-path))
-         (repo-name (cadr pr-review--pr-path))
-         (res (ghub-request
-               "GET"
-               (format "/repos/%s/%s/compare/%s...%s"
-                       repo-owner repo-name base-ref head-ref)
-               '()
-               :headers '(("Accept" . "application/vnd.github.v3.diff"))
-               :reader 'ghub--decode-payload
-               :auth pr-review-ghub-auth-name
-               :username pr-review-ghub-username)))
+  (when-let* ((repo-owner (car pr-review--pr-path))
+              (repo-name (cadr pr-review--pr-path))
+              ;; res may be nil (if the ref is deleted)
+              ;; in which case we will return nil
+              (res (ghub-request
+                    "GET"
+                    (format "/repos/%s/%s/compare/%s...%s"
+                            repo-owner repo-name base-ref head-ref)
+                    '()
+                    :headers '(("Accept" . "application/vnd.github.v3.diff"))
+                    :reader 'ghub--decode-payload
+                    :auth pr-review-ghub-auth-name
+                    :username pr-review-ghub-username)))
     ;; magit-diff expects diff with --no-prefix
     (setq res (replace-regexp-in-string
                (rx line-start "diff --git a/" (group-n 1 (+? not-newline)) " b/" (backref 1) line-end)
@@ -92,14 +94,15 @@
                (rx line-start (group-n 1 (or "+++" "---")) " " (or "a/" "b/") (group-n 2 (+? not-newline)) line-end)
                "\\1 \\2"
                res))
-    (concat res "\n")))  ;; don't why, just need an extra new line
+    ;; don't why, just need an extra new line
+    (concat res "\n")))
 
 (defvar-local pr-review--compare-cache-refs nil)
 (defvar-local pr-review--compare-cache-result nil)
 (defun pr-review--fetch-compare-cached (base-ref head-ref)
   (unless (and pr-review--compare-cache-result
                (equal pr-review--compare-cache-refs (cons base-ref head-ref)))
-    (let ((res (pr-review--fetch-compare base-ref head-ref)))
+    (when-let ((res (pr-review--fetch-compare base-ref head-ref)))
       (setq-local pr-review--compare-cache-result res
                   pr-review--compare-cache-refs (cons base-ref head-ref))))
   pr-review--compare-cache-result)

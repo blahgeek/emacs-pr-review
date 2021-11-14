@@ -48,7 +48,7 @@
               (cond
                ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
                 'pr-review-success-state-face)
-               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING"))
+               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING" "UNKNOWN"))
                 'pr-review-error-state-face)
                ((member str '("RESOLVED" "OUTDATED"))
                 'pr-review-info-state-face)
@@ -172,9 +172,11 @@
   (let ((beg (point)))
     (setq-local pr-review--diff-begin-point beg)
 
-    (pr-review--insert-fontified diff 'diff-mode)
-    (goto-char beg)
-    (magit-wash-sequence (apply-partially 'magit-diff-wash-diff '()))
+    (if (not diff)
+        (insert (propertize "Diff not available\n" 'face 'pr-review-error-state-face))
+      (pr-review--insert-fontified diff 'diff-mode)
+      (goto-char beg)
+      (magit-wash-sequence (apply-partially 'magit-diff-wash-diff '())))
 
     (goto-char beg)
     (forward-line -1)
@@ -462,7 +464,8 @@ it will be inserted at the beginning."
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
   (magit-insert-section (pr-review--check-section 'check-section-id)
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
-                                  (pr-review--propertize-keyword (alist-get 'state status-check-rollup))))
+                                  (pr-review--propertize-keyword
+                                   (or (alist-get 'state status-check-rollup) "UNKNOWN"))))
     (let ((valid-contexts (mapcar (lambda (node) (alist-get 'context node))
                                   (let-alist status-check-rollup .contexts.nodes))))
       (mapc (lambda (required-context)
