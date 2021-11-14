@@ -57,7 +57,8 @@ There's three most-used keybindings:
   - Otherwise, add a comment to the pull request.
 - `C-c C-s`: perform some "action" based on current context.
   - When current point is on a review thread, resolve current thread;
-  - Otherwise, submit the review with possibly pending review threads.
+  - When current point is on the changed files, or there are any pending reviews, prompt to submit the review with action;
+  - Otherwise, prompt to merge, close or re-open the PR.
 - `C-c C-e`: edit the content under point based on current context, the following items can be updated (if you have the right permission):
   - PR description
   - PR title

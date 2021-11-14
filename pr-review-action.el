@@ -33,6 +33,12 @@
 
 (declare-function pr-review-refresh "pr-review")
 
+(defconst pr-review--review-actions '("COMMENT" "APPROVE" "REQUEST_CHANGES")
+  "Available actions for `pr-review-submit-review'.")
+
+(defconst pr-review--merge-methods '("MERGE" "REBASE" "SQUASH")
+  "Available methods for `pr-review-merge'.")
+
 (defun pr-review--insert-quoted-content (body)
   "Insert BODY as quoted in markdown format."
   (when body
@@ -199,7 +205,7 @@ BODY is the result text user entered."
   "Submit review with pending review threads, with action EVENT.
 When called interactively, user will be asked to choose an event."
   (interactive (list (completing-read "Select review action: "
-                                      '("COMMENT" "APPROVE" "REQUEST_CHANGES")
+                                      pr-review--review-actions
                                       nil 'require-match)))
   (pr-review--open-input-buffer
    (format "Submit review %s (%s threads)." event (length pr-review--pending-review-threads))
@@ -208,6 +214,53 @@ When called interactively, user will be asked to choose an event."
                     (current-buffer) event)
    'refresh-after-exit
    'allow-empty))
+
+(defun pr-review-merge (method)
+  "Merge current PR with METHOD.
+Available methods is `pr-review--merge-methods'.
+Will confirm before sending the request."
+  (interactive (list (completing-read "Select merge method: "
+                                      pr-review--merge-methods
+                                      nil 'require-match)))
+  (when (y-or-n-p (format "Really merge this PR with method %s?" method))
+    (pr-review--post-merge-pr (alist-get 'id pr-review--pr-info) method)
+    (pr-review-refresh)))
+
+(defun pr-review--close-or-reopen-action ()
+  "Return the expected action if `pr-review-close-or-reopen' is called.
+Maybe 'close or 'reopen or nil."
+  (pcase (alist-get 'state pr-review--pr-info)
+    ("CLOSED" 'reopen)
+    ("OPEN" 'close)
+    (_ nil)))
+
+(defun pr-review-close-or-reopen ()
+  "Close or re-open PR based on current state.
+Will confirm before sending the request."
+  (interactive)
+  (pcase (alist-get 'state pr-review--pr-info)
+    ("CLOSED" (when (y-or-n-p "Really re-open this PR?")
+                (pr-review--post-reopen-pr (alist-get 'id pr-review--pr-info))
+                (pr-review-refresh)))
+    ("OPEN" (when (y-or-n-p "Really close this PR?")
+              (pr-review--post-close-pr (alist-get 'id pr-review--pr-info))
+              (pr-review-refresh)))
+    (_
+     (error "Cannot close or reopen PR in current state."))))
+
+(defun pr-review-close-or-reopen-or-merge (action)
+  "Close or re-open or merge based on ACTION.
+Used for interactive selection one of them."
+  (interactive (list (let ((actions pr-review--merge-methods))
+                       (when-let ((close-or-reopen-action (pr-review--close-or-reopen-action)))
+                         (setq actions
+                               (append actions
+                                       (list (upcase (symbol-name close-or-reopen-action))))))
+                       (completing-read "Select action: "
+                                        actions nil 'require-match))))
+  (if (member action pr-review--merge-methods)
+      (pr-review-merge action)
+    (pr-review-close-or-reopen)))
 
 (defun pr-review-edit-comment ()
   "Edit comment under current point."
@@ -334,8 +387,12 @@ Based on current context, may be: resolve thread, submit review."
   (pcase (magit-current-section)
     ((pred pr-review--review-thread-context-p)
      (pr-review-resolve-thread))
+    ;; in diff, or has pending review threads
+    ((or (pred pr-review--diff-context-p)
+         (pred (lambda (_) pr-review--pending-review-threads)))
+     (call-interactively #'pr-review-submit-review))
     (_
-     (call-interactively #'pr-review-submit-review))))
+     (call-interactively #'pr-review-close-or-reopen-or-merge))))
 
 
 (defun pr-review-context-edit ()

@@ -207,6 +207,25 @@ BODY: review comment body."
                (pullRequestId . ,pr-node-id)
                (threads . ,pending-threads))))))
 
+(defun pr-review--post-merge-pr (pr-node-id method)
+  "Send API request to merge pr PR-NODE-ID with METHOD."
+  (pr-review--execute-graphql
+   'merge-pr
+   `((input . ((pullRequestId . ,pr-node-id)
+               (mergeMethod . ,method))))))
+
+(defun pr-review--post-close-pr (pr-node-id)
+  "Send API request to close pr PR-NODE-ID."
+  (pr-review--execute-graphql
+   'close-pr
+   `((input . ((pullRequestId . ,pr-node-id))))))
+
+(defun pr-review--post-reopen-pr (pr-node-id)
+  "Send API request to re-open pr PR-NODE-ID."
+  (pr-review--execute-graphql
+   'reopen-pr
+   `((input . ((pullRequestId . ,pr-node-id))))))
+
 (defun pr-review--search-prs (query)
   "Search pull requests with QUERY."
   (let-alist (pr-review--execute-graphql

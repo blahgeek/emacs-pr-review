@@ -609,6 +609,32 @@ It will be inserted at the beginning."
           "#000000"
         "#ffffff"))))
 
+(defun pr-review--insert-review-action-buttons ()
+  "Insert text and buttons for review actions."
+  (insert "Submit review with action:")
+  (dolist (event pr-review--review-actions)
+    (insert " ")
+    (insert-button event 'face 'pr-review-button-face
+                   'action (lambda (_) (pr-review-submit-review event))))
+  (insert ", or ")
+  (insert-button "COMMENT ONLY" 'face 'pr-review-button-face
+                 'action (lambda (_) (pr-review-comment)))
+  (insert "\n"))
+
+(defun pr-review--insert-merge-close-reopen-action-buttons ()
+  "Insert text and buttons for merge, close or reopen."
+  (insert "Merge pull request with method:")
+  (dolist (method pr-review--merge-methods)
+    (insert " ")
+    (insert-button method 'face 'pr-review-button-face
+                   'action (lambda (_) (pr-review-merge method))))
+  (when-let ((close-or-reopen-action (pr-review--close-or-reopen-action)))
+    (insert ", or ")
+    (insert-button (upcase (symbol-name close-or-reopen-action))
+                   'face 'pr-review-button-face
+                   'action (lambda (_) (pr-review-close-or-reopen))))
+  (insert "\n"))
+
 (defun pr-review--insert-pr-body (pr diff)
   "Insert main body of PR with DIFF."
   (let ((top-comment-id-to-review-thread
@@ -684,17 +710,10 @@ It will be inserted at the beginning."
                   (length .files.nodes)
                   (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
                   (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
-      (pr-review--insert-diff diff)
-      (insert "\n"
-              "Review Changes with:")
-      (dolist (event '("COMMENT" "APPROVE" "REQUEST_CHANGES"))
-        (insert " ")
-        (insert-button event 'face 'pr-review-button-face
-                       'action (lambda (_) (pr-review-submit-review event))))
-      (insert ", or ")
-      (insert-button "COMMENT ONLY" 'face 'pr-review-button-face
-                     'action (lambda (_) (pr-review-comment)))
-      (insert "\n"))
+      (pr-review--insert-diff diff))
+    (insert "\n")
+    (pr-review--insert-review-action-buttons)
+    (pr-review--insert-merge-close-reopen-action-buttons)
     (mapc 'pr-review--insert-in-diff-review-thread-link
           (let-alist pr .reviewThreads.nodes))))
 
