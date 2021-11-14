@@ -418,6 +418,18 @@ it will be inserted at the beginning."
                    (pr-review--propertize-username (or .assignee.login ""))
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
+                 ("ReviewRequestedEvent"
+                  (list
+                   (propertize "Requested review from " 'face 'magit-section-heading)
+                   (pr-review--propertize-username (or .requestedReviewer.login ""))
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
+                 ("ReviewRequestRemovedEvent"
+                  (list
+                   (propertize "Removed review request from " 'face 'magit-section-heading)
+                   (pr-review--propertize-username (or .requestedReviewer.login ""))
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
                  ("MergedEvent"
                   (list
                    (propertize "Merged" 'face 'pr-review-success-state-face)

@@ -167,7 +167,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
 
-      timelineItems(first: 100, itemTypes: [ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT]) {
+      timelineItems(first: 100, itemTypes: [ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT]) {
         nodes {
           __typename
           ... on AssignedEvent {
@@ -216,6 +216,30 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
               abbreviatedOid
               messageHeadline
               pushedDate
+            }
+          }
+          ... on ReviewRequestedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+            requestedReviewer {
+              ... on User {
+                login
+              }
+            }
+          }
+          ... on ReviewRequestRemovedEvent {
+            id
+            createdAt
+            actor {
+              login
+            }
+            requestedReviewer {
+              ... on User {
+                login
+              }
             }
           }
         }
