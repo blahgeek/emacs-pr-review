@@ -430,15 +430,30 @@ it will be inserted at the beginning."
                    (propertize "Closed" 'face 'pr-review-error-state-face)
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
+                 ("PullRequestCommit"
+                  (list
+                   (propertize "Pushed commit" 'face 'magit-section-heading)
+                   " - "
+                   (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                   " - "
+                   (propertize (pr-review--format-timestamp .commit.pushedDate)
+                               'face 'pr-review-timestamp-face)
+                   " - "
+                   .commit.messageHeadline))
                  ("HeadRefForcePushedEvent"
                   (list
                    (propertize "Force pushed" 'face 'magit-section-heading)
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)
                    " - "
-                   .beforeCommit.abbreviatedOid " -> " .afterCommit.abbreviatedOid))))
-        " - "
-        (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))
+                   (propertize .beforeCommit.abbreviatedOid 'face 'pr-review-hash-face)
+                   " -> "
+                   (propertize .afterCommit.abbreviatedOid 'face 'pr-review-hash-face)))))
+        (when .createdAt
+          (concat
+           " - "
+           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
+           ))))
     (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -547,10 +562,11 @@ it will be inserted at the beginning."
            (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
            (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
            (mapcar (lambda (x) (cons x 'event)) (let-alist pr .timelineItems.nodes)))))
-    (setq timeline-items
-          (sort timeline-items
-                (lambda (a b) (string< (alist-get 'createdAt (car a))
-                                       (alist-get 'createdAt (car b))))))
+    (let ((sort-key-fn (lambda (item) (let-alist (car item)
+                                        (or .createdAt .commit.pushedDate "")))))
+      (setq timeline-items (sort timeline-items (lambda (a b)
+                                                  (string< (funcall sort-key-fn a)
+                                                           (funcall sort-key-fn b))))))
     (let-alist pr
       (pr-review--insert-link .url .url)
       (insert "\n"

@@ -69,6 +69,11 @@
   "Face used for branchs."
   :group 'pr-review)
 
+(defface pr-review-hash-face
+  '((t :inherit font-lock-comment-face))
+  "Face used for commit hash."
+  :group 'pr-review)
+
 (defface pr-review-label-face
   '((t :box t :foregroud "black"))
   "Face used for labels."
