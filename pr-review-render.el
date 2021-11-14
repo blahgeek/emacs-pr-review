@@ -505,6 +505,19 @@ it will be inserted at the beginning."
                      (let-alist pr-info .assignees.nodes) ", ")
           "\n"))
 
+(defun pr-review--insert-commit-section (commits)
+  (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
+    (magit-insert-heading (format "%d Commits" (length commits)))
+    (mapc (lambda (commit)
+            (message "%s" commit)
+            (let-alist commit
+              (insert (concat "- "
+                              (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                              " "
+                              .commit.messageHeadline
+                              "\n"))))
+          commits)))
+
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
   (magit-insert-section (pr-review--check-section 'check-section-id)
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
@@ -619,7 +632,10 @@ it will be inserted at the beginning."
         (oset section updatable .viewerCanUpdate)
         (magit-insert-heading "Description")
         (pr-review--insert-html .bodyHTML))
-      (insert "\n"))
+      (insert "\n")
+      (when .commits.nodes
+        (pr-review--insert-commit-section .commits.nodes)
+        (insert "\n")))
     (dolist (timeline-item timeline-items)
       (pcase (cdr timeline-item)
         ('review
@@ -630,7 +646,7 @@ it will be inserted at the beginning."
          (pr-review--insert-event-section (car timeline-item)))))
     (insert "\n")
     (let ((status-check-rollup (let-alist
-                                   (nth 0 (let-alist pr .commits.nodes))
+                                   (nth 0 (let-alist pr .latestCommits.nodes))
                                  .commit.statusCheckRollup))
           (required-contexts (let-alist pr .baseRef.refUpdateRule.requiredStatusCheckContexts)))
       (when (or status-check-rollup required-contexts)

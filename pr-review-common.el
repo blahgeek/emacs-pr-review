@@ -131,6 +131,7 @@
 
 (defclass pr-review--diff-section (magit-section) ())
 (defclass pr-review--check-section (magit-section) ())
+(defclass pr-review--commit-section (magit-section) ())
 
 (defclass pr-review--review-thread-section (magit-section)
   ((top-comment-id :initform nil)

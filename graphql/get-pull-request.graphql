@@ -139,7 +139,16 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
 
-      commits(last: 1) {
+      commits(first: 100) {
+        nodes {
+          commit {
+            abbreviatedOid
+            messageHeadline
+          }
+        }
+      }
+
+      latestCommits : commits(last: 1) {
         nodes {
           commit {
             oid
