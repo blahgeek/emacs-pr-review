@@ -432,25 +432,37 @@ It will be inserted at the beginning."
                  ("AssignedEvent"
                   (list
                    (propertize "Assigned to " 'face 'magit-section-heading)
-                   (pr-review--propertize-username (or .assignee.login ""))
+                   (mapconcat (lambda (item)
+                                (let-alist item
+                                  (pr-review--propertize-username .assignee.login)))
+                              .groupedItems ", ")
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("UnassignedEvent"
                   (list
                    (propertize "Unassigned to " 'face 'magit-section-heading)
-                   (pr-review--propertize-username (or .assignee.login ""))
+                   (mapconcat (lambda (item)
+                                (let-alist item
+                                  (pr-review--propertize-username .assignee.login)))
+                              .groupedItems ", ")
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ReviewRequestedEvent"
                   (list
                    (propertize "Requested review from " 'face 'magit-section-heading)
-                   (pr-review--propertize-username (or .requestedReviewer.login ""))
+                   (mapconcat (lambda (item)
+                                (let-alist item
+                                  (pr-review--propertize-username .requestedReviewer.login)))
+                              .groupedItems ", ")
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ReviewRequestRemovedEvent"
                   (list
                    (propertize "Removed review request from " 'face 'magit-section-heading)
-                   (pr-review--propertize-username (or .requestedReviewer.login ""))
+                   (mapconcat (lambda (item)
+                                (let-alist item
+                                  (pr-review--propertize-username .requestedReviewer.login)))
+                              .groupedItems ", ")
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("MergedEvent"
@@ -467,27 +479,36 @@ It will be inserted at the beginning."
                    (pr-review--propertize-username .actor.login)))
                  ("PullRequestCommit"
                   (list
-                   (propertize "Pushed commit" 'face 'magit-section-heading)
-                   " - "
-                   (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
-                   " - "
-                   (propertize (pr-review--format-timestamp .commit.pushedDate)
-                               'face 'pr-review-timestamp-face)
-                   " - "
-                   .commit.messageHeadline))
+                   (propertize (format "Pushed %d commits" (length .groupedItems))
+                               'face 'magit-section-heading)))
                  ("HeadRefForcePushedEvent"
                   (list
-                   (propertize "Force pushed" 'face 'magit-section-heading)
+                   (propertize (format "Force pushed %d times" (length .groupedItems))
+                               'face 'magit-section-heading)
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)
                    " - "
-                   (propertize .beforeCommit.abbreviatedOid 'face 'pr-review-hash-face)
+                   (propertize
+                    (let-alist (car .groupedItems) .beforeCommit.abbreviatedOid)
+                    'face 'pr-review-hash-face)
                    " -> "
-                   (propertize .afterCommit.abbreviatedOid 'face 'pr-review-hash-face)))))
+                   (propertize
+                    (let-alist (car (last .groupedItems)) .afterCommit.abbreviatedOid)
+                    'face 'pr-review-hash-face)))))
         (when .createdAt
           (concat
            " - "
-           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)))))
+           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))))
+      ;; body
+      (pcase .__typename
+        ("PullRequestCommit"
+         (dolist (commit .groupedItems)
+           (let-alist commit
+             (insert (concat "- "
+                             (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                             " "
+                             .commit.messageHeadline
+                             "\n")))))))
     (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -530,7 +551,6 @@ It will be inserted at the beginning."
   (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
     (magit-insert-heading (format "%d Commits" (length commits)))
     (mapc (lambda (commit)
-            (message "%s" commit)
             (let-alist commit
               (insert (concat "- "
                               (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
@@ -635,20 +655,63 @@ It will be inserted at the beginning."
                    'action (lambda (_) (pr-review-close-or-reopen))))
   (insert "\n"))
 
+(defun pr-review--is-timeline-items-groupable (item-a item-b)
+  "Check if timelineItems ITEM-A and ITEM-B should be grouped."
+  (and (equal (alist-get '__typename item-a) (alist-get '__typename item-b))
+       (pcase (alist-get '__typename item-a)
+         ("PullRequestCommit"
+          t)
+         ((or "AssignedEvent"
+              "UnassignedEvent"
+              "HeadRefForcePushedEvent"
+              "ReviewRequestedEvent"
+              "ReviewRequestRemovedEvent")
+          (equal (let-alist item-a .actor.login)
+                 (let-alist item-b .actor.login))))))
+
+(defun pr-review--normalize-group-timeline-items (items)
+  "Normalize and group .timelineItems.nodes ITEMS.
+Some events can be merged into one item so that
+it can be displayed in a single line."
+  (let (groups current-group)
+    (dolist (item items)
+      ;; end current group if:
+      ;; current group is not empty and it's not groupable with current item
+      (when (and current-group
+                 (not (pr-review--is-timeline-items-groupable (car current-group) item)))
+        (push (nreverse current-group) groups)
+        (setq current-group nil))
+      (push item current-group))
+    (when current-group
+      (push (nreverse current-group) groups)
+      (setq current-group nil))
+
+    ;; process each group
+    (mapcar (lambda (group)
+              ;; use the last item of the group as the result item,
+              ;; with additional property groupedItems
+              (let (res)
+                (setq res (cons `(groupedItems . ,group)
+                                (car (last group))))
+                (let-alist res
+                  (when (equal .__typename "PullRequestCommit")
+                    (setf (alist-get 'createdAt res) .commit.pushedDate)))
+                res))
+            (nreverse groups))))
+
 (defun pr-review--insert-pr-body (pr diff)
   "Insert main body of PR with DIFF."
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
         (timeline-items
-          (append
-           (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
-           (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
-           (mapcar (lambda (x) (cons x 'event)) (let-alist pr .timelineItems.nodes)))))
-    (let ((sort-key-fn (lambda (item) (let-alist (car item)
-                                        (or .createdAt .commit.pushedDate "")))))
-      (setq timeline-items (sort timeline-items (lambda (a b)
-                                                  (string< (funcall sort-key-fn a)
-                                                           (funcall sort-key-fn b))))))
+         (append
+          (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
+          (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
+          (mapcar (lambda (x) (cons x 'event))
+                  (pr-review--normalize-group-timeline-items (let-alist pr .timelineItems.nodes))))))
+    (setq timeline-items
+          (seq-sort-by (lambda (item) (let-alist (car item) (or .createdAt "")))
+                       #'string< timeline-items))
     (let-alist pr
       (pr-review--insert-link .url .url)
       (insert "\n"
