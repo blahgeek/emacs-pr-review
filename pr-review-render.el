@@ -477,6 +477,11 @@ It will be inserted at the beginning."
                    (propertize "Closed" 'face 'pr-review-error-state-face)
                    (propertize " by " 'face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
+                 ("ReopenedEvent"
+                  (list
+                   (propertize "Reopened" 'face 'pr-review-success-state-face)
+                   (propertize " by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)))
                  ("PullRequestCommit"
                   (list
                    (propertize (format "Pushed %d commits" (length .groupedItems))
