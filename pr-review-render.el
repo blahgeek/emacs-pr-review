@@ -666,8 +666,10 @@ It will be inserted at the beginning."
               "HeadRefForcePushedEvent"
               "ReviewRequestedEvent"
               "ReviewRequestRemovedEvent")
-          (equal (let-alist item-a .actor.login)
-                 (let-alist item-b .actor.login))))))
+          (and (equal (let-alist item-a .actor.login)
+                      (let-alist item-b .actor.login))
+               (> 300 (abs (- (float-time (date-to-time (let-alist item-a .createdAt)))
+                              (float-time (date-to-time (let-alist item-b .createdAt)))))))))))
 
 (defun pr-review--normalize-group-timeline-items (items)
   "Normalize and group .timelineItems.nodes ITEMS.
