@@ -74,7 +74,7 @@
              (dom-children dom) ""))
 
 (defun pr-review--shr-tag-div (dom)
-  "Function for rendering div tag as DOM in shr, special handle for suggested-changes."
+  "Rendering div tag as DOM in shr, with special handle for suggested-changes."
   (if (not (string-match-p ".*suggested-changes.*" (or (dom-attr dom 'class) "")))
       (shr-tag-div dom)
     (let ((tbody (dom-by-tag dom 'tbody)))
