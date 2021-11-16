@@ -337,7 +337,7 @@ It will be inserted at the beginning."
     (let ((diffhunk-lines (split-string (alist-get 'diffHunk top-comment) "\n"))
           beg end)
       (setq beg (point))
-      (while (length> diffhunk-lines 4)   ;; diffHunk may be very long, only keep last 4 lines
+      (while (> (length diffhunk-lines) 4)   ;; diffHunk may be very long, only keep last 4 lines
         (setq diffhunk-lines (cdr diffhunk-lines)))
       (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
                                    pr-review-section-indent-width)
