@@ -73,7 +73,7 @@
     (when (pr-review--review-thread-section-p section)
       (let ((resolved (oref section is-resolved))
             (thread-id (oref section value)))
-        (when (y-or-n-p (format "Really %s this thread?"
+        (when (y-or-n-p (format "Really %s this thread? "
                                 (if resolved "unresolve" "resolve")))
           (pr-review--post-resolve-review-thread
            thread-id (not resolved))
@@ -222,7 +222,7 @@ Will confirm before sending the request."
   (interactive (list (completing-read "Select merge method: "
                                       pr-review--merge-methods
                                       nil 'require-match)))
-  (when (y-or-n-p (format "Really merge this PR with method %s?" method))
+  (when (y-or-n-p (format "Really merge this PR with method %s? " method))
     (pr-review--post-merge-pr (alist-get 'id pr-review--pr-info) method)
     (pr-review-refresh)))
 
@@ -239,14 +239,14 @@ Maybe 'close or 'reopen or nil."
 Will confirm before sending the request."
   (interactive)
   (pcase (alist-get 'state pr-review--pr-info)
-    ("CLOSED" (when (y-or-n-p "Really re-open this PR?")
+    ("CLOSED" (when (y-or-n-p "Really re-open this PR? ")
                 (pr-review--post-reopen-pr (alist-get 'id pr-review--pr-info))
                 (pr-review-refresh)))
-    ("OPEN" (when (y-or-n-p "Really close this PR?")
+    ("OPEN" (when (y-or-n-p "Really close this PR? ")
               (pr-review--post-close-pr (alist-get 'id pr-review--pr-info))
               (pr-review-refresh)))
     (_
-     (error "Cannot close or reopen PR in current state."))))
+     (error "Cannot close or reopen PR in current state"))))
 
 (defun pr-review-close-or-reopen-or-merge (action)
   "Close or re-open or merge based on ACTION.
