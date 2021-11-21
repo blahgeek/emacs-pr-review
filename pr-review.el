@@ -169,75 +169,86 @@ otherwise, ask interactively."
           (match-string 2 url)
           (string-to-number (match-string 3 url)))))
 
-(defun pr-review--pr-path-at-point ()
-  "Return pr path (repo-owner repo-name pr-id) based on current point, or nil.
-Used by the default value of `pr-review'."
-  (or
-   ;; url at point
-   (when-let* ((url (thing-at-point 'url t))
-               (res (pr-review-url-parse url)))
-     res)
-   ;; notmuch message ID
-   (when (and (eq major-mode 'notmuch-show-mode)
-              (fboundp 'notmuch-show-get-message-id))
-     (when-let* ((msg-id (notmuch-show-get-message-id 'bare))
-                 (match (string-match (rx bol
-                                          (group-n 1 (+ (not ?/))) "/"
-                                          (group-n 2 (+ (not ?/))) "/pull/"
-                                          (group-n 3 (+ (any digit)))
-                                          (* not-newline)
-                                          "@github.com" eol)
-                                      msg-id)))
-       (list (match-string 1 msg-id)
-             (match-string 2 msg-id)
-             (string-to-number (match-string 3 msg-id)))))))
-
-(defun pr-review--interactive-arg ()
-  "Return args for interactive call for `pr-review'."
-  (append
-   (let* ((default-pr-path (pr-review--pr-path-at-point))
-          (input-url (read-string (concat "URL to review"
-                                          (when default-pr-path
-                                            (apply #'format " (default: %s/%s/%s)"
-                                                   default-pr-path))
-                                          ":")))
-          (res (or (pr-review-url-parse input-url)
-                   default-pr-path)))
-     (unless res
-       (error "Cannot parse url %s" input-url))
-     res)
-   ;; new-window
-   (list current-prefix-arg)))
-
+(defun pr-review--url-parse-anchor (url)
+  "Return anchor id for URL, or nil on error.
+Example: given pr url https://github.com/.../pull/123#discussion_r12345,
+return 12345 (as string).
+This is used to jump to specific section after opening the buffer."
+  (when-let ((fragment (cadr (split-string url "#"))))
+    (when (string-match (rx (group (+ (any digit)))) fragment)
+      (match-string 1 fragment))))
 
 ;;;###autoload
-(defun pr-review (repo-owner repo-name pr-id &optional new-window)
+(defun pr-review-open (repo-owner repo-name pr-id &optional new-window anchor)
   "Open review buffer for REPO-OWNER/REPO-NAME PR-ID (number).
 Open in current window if NEW-WINDOW is nil, in other window otherwise.
-When called interactively, user will be prompted to enter a PR url
-and new window will be used when called with prefix."
-  (interactive (pr-review--interactive-arg))
+ANCHOR is a database id that may be present in the url fragment
+of a github pr notification, if it's not nil, try to jump to specific
+location after open."
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
     (unless (eq major-mode 'pr-review-mode)
       (pr-review-mode))
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
     (pr-review-refresh)
+    (when anchor
+      (pr-review-goto-database-id anchor))
     (funcall (if new-window
                  'switch-to-buffer-other-window
                'switch-to-buffer)
              (current-buffer))))
 
+(defun pr-review--find-url-in-buffer ()
+  "Return a possible pr url in current buffer.
+It's used as the default value of `pr-review'."
+  (or
+   ;; url at point
+   (when-let ((url (thing-at-point 'url t)))
+     (when (pr-review-url-parse url)
+       url))
+   ;; find links in buffer. Useful in buffer with github notification emails
+   (when-let ((prop (text-property-search-forward
+                     'shr-url nil
+                     (lambda (_ val) (and val (pr-review-url-parse val))))))
+     (goto-char (prop-match-beginning prop))
+     (prop-match-value prop))))
+
+(defun pr-review--interactive-arg ()
+  "Return args for interactive call for `pr-review'."
+  (list
+   ;; url
+   (let* ((default-url (pr-review--find-url-in-buffer))
+          (default-pr-path (and default-url (pr-review-url-parse default-url)))
+          (input-url (read-string (concat "URL to review"
+                                          (when default-pr-path
+                                            (apply #'format " (default: %s/%s/%s)"
+                                                   default-pr-path))
+                                          ":"))))
+     (if (string-empty-p input-url)
+         (or default-url "")
+       input-url))
+   ;; new-window
+   current-prefix-arg))
+
+;;;###autoload
+(defun pr-review (url &optional new-window)
+  "Open Pr Review with URL (which is a link to github pr).
+This is the main entrypoint of `pr-review'.
+If NEW-WINDOW is not nil, open it in a new window.
+When called interactively, user will be prompted to enter a PR url
+and new window will be used when called with prefix."
+  (interactive (pr-review--interactive-arg))
+  (let ((res (pr-review-url-parse url))
+        (anchor (pr-review--url-parse-anchor url)))
+    (if (not res)
+        (message "Cannot parse URL %s" url)
+      (apply #'pr-review-open (append res (list new-window anchor))))))
 
 ;;;###autoload
 (defun pr-review-open-url (url &optional new-window &rest _)
-  "Open URL (which is a link to github pr) using `pr-review'.
-If NEW-WINDOW is not nil, open it in a new window.
-Works like `pr-review' but accepts URL, can be used in `browse-url-handlers'."
-  (let ((res (pr-review-url-parse url)))
-    (if (not res)
-        (message "Cannot parse URL %s" url)
-      (apply #'pr-review (append res (list new-window))))))
-
+  "Open Pr Review with URL, in a new window if NEW-WINDOW is not nil.
+This function is the same as `pr-review',
+but it can be used in `browse-url-handlers' with `pr-review-url-parse'."
+  (pr-review url new-window))
 
 (defcustom pr-review-search-default-query "type:pr sort:updated author:@me state:open"
   "Default query for `pr-review-search-open'."

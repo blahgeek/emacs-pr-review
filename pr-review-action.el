@@ -463,5 +463,22 @@ When called interactively, user can select reviewers from list."
     (pr-review--post-request-reviews (alist-get 'id pr-review--pr-info) ids)
     (pr-review-refresh)))
 
+(defun pr-review-goto-database-id (database-id)
+  "Goto section with DATABASE-ID, which is used as the anchor in github urls."
+  (let (pos)
+    (save-excursion
+      (goto-char (point-min))
+      (when-let ((match (text-property-search-forward
+                         'magit-section database-id
+                         (lambda (target prop-value)
+                           (when (or (pr-review--review-section-p prop-value)
+                                     (pr-review--comment-section-p prop-value)
+                                     (pr-review--review-thread-item-section-p prop-value))
+                             (equal (number-to-string (oref prop-value databaseId))
+                                    target))))))
+        (setq pos (prop-match-beginning match))))
+    (when pos
+      (goto-char pos))))
+
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

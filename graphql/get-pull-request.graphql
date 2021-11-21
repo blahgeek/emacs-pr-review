@@ -59,6 +59,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       comments(first: 100) {
         nodes {
           id
+          databaseId
           viewerCanUpdate
           author {
             login
@@ -84,6 +85,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       reviews(first: 100) {
         nodes {
           id
+          databaseId
           viewerCanUpdate
           body
           bodyHTML
@@ -96,6 +98,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           comments(first: 100) {
             nodes {
               id
+              databaseId
               diffHunk
               path
               author {
@@ -121,6 +124,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           comments(first: 100) {
             nodes {
               id
+              databaseId
               viewerCanUpdate
               author {
                 login

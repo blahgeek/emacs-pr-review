@@ -353,6 +353,7 @@ It will be inserted at the beginning."
     (mapc (lambda (cmt)
             (let-alist cmt
               (magit-insert-section item-section (pr-review--review-thread-item-section .id)
+                (oset item-section databaseId .databaseId)
                 (oset item-section updatable .viewerCanUpdate)
                 (oset item-section body .body)
                 (magit-insert-heading
@@ -390,6 +391,7 @@ It will be inserted at the beginning."
                 (not (equal .state "COMMENTED"))
                 (not (string-empty-p .body)))
         (magit-insert-section section (pr-review--review-section .id)
+          (oset section databaseId .databaseId)
           (oset section updatable .viewerCanUpdate)
           (oset section body .body)
           (magit-insert-heading
@@ -411,6 +413,7 @@ It will be inserted at the beginning."
   "Insert comment section with comment CMT."
   (let-alist cmt
     (magit-insert-section section (pr-review--comment-section .id)
+      (oset section databaseId .databaseId)
       (oset section updatable .viewerCanUpdate)
       (oset section body .body)
       (magit-insert-heading

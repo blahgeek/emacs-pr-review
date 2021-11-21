@@ -123,11 +123,13 @@
 ;; section classes
 (defclass pr-review--review-section (magit-section)
   ((body :initform nil)
-   (updatable :initform nil)))
+   (updatable :initform nil)
+   (databaseId :initform nil)))
 
 (defclass pr-review--comment-section (magit-section)
   ((body :initform nil)
-   (updatable :initform nil)))
+   (updatable :initform nil)
+   (databaseId :initform nil)))
 
 (defclass pr-review--diff-section (magit-section) ())
 (defclass pr-review--check-section (magit-section) ())
@@ -139,7 +141,8 @@
 
 (defclass pr-review--review-thread-item-section (magit-section)
   ((body :initform nil)
-   (updatable :initform nil)))
+   (updatable :initform nil)
+   (databaseId :initform nil)))
 
 (defclass pr-review--root-section (magit-section)
   ((title :initform nil)
