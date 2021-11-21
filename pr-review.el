@@ -239,13 +239,17 @@ Works like `pr-review' but accepts URL, can be used in `browse-url-handlers'."
       (apply #'pr-review (append res (list new-window))))))
 
 
+(defcustom pr-review-search-default-query "type:pr sort:updated author:@me state:open"
+  "Default query for `pr-review-search-open'."
+  :type 'string
+  :group 'pr-review)
+
 ;;;###autoload
 (defun pr-review-search-open (query)
   "Search PRs using a custom QUERY and open one of them.
 See github docs for syntax of QUERY.
 When called interactively, you will be asked to enter the QUERY."
-  (interactive (list (read-string "Search GitHub> "
-                                  "type:pr sort:updated author:@me state:open")))
+  (interactive (list (read-string "Search GitHub> " pr-review-search-default-query)))
   (let* ((prs (pr-review--search-prs query))
          (prs-alist (mapcar (lambda (pr)
                               (let-alist pr
