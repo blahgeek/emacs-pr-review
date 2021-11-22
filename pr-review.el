@@ -79,7 +79,7 @@
       (kbd "g o") #'pr-review-open-in-default-browser
       [remap evil-previous-line] 'evil-previous-visual-line
       [remap evil-next-line] 'evil-next-visual-line
-      (kbd "C-o") 'pop-to-mark-command
+      (kbd "C-o") #'pop-to-mark-command
       (kbd "q") #'kill-current-buffer)))
 
 (defvar-local pr-review--current-show-level 3)

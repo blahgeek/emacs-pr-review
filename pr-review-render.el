@@ -512,11 +512,11 @@ It will be inserted at the beginning."
         ("PullRequestCommit"
          (dolist (commit .groupedItems)
            (let-alist commit
-             (insert (concat "- "
-                             (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
-                             " "
-                             .commit.messageHeadline
-                             "\n")))))))
+             (insert "- "
+                     (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                     " "
+                     .commit.messageHeadline
+                     "\n"))))))
     (insert "\n")))
 
 (defun pr-review--insert-reviewers-info (pr-info)
@@ -540,7 +540,7 @@ It will be inserted at the beginning."
                  (insert-button
                   "Request Review"
                   'face 'pr-review-button-face
-                  'action (lambda (_) (call-interactively 'pr-review-request-reviews))))
+                  'action (lambda (_) (call-interactively #'pr-review-request-reviews))))
                (insert "\n"))
              groups)))
 
@@ -560,11 +560,11 @@ It will be inserted at the beginning."
     (magit-insert-heading (format "%d Commits" (length commits)))
     (mapc (lambda (commit)
             (let-alist commit
-              (insert (concat "- "
-                              (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
-                              " "
-                              .commit.messageHeadline
-                              "\n"))))
+              (insert "- "
+                      (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                      " "
+                      .commit.messageHeadline
+                      "\n")))
           commits)))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
@@ -577,11 +577,11 @@ It will be inserted at the beginning."
                                   (let-alist status-check-rollup .contexts.nodes))))
       (mapc (lambda (required-context)
               (unless (member required-context valid-contexts)
-                (insert (concat "- "
-                                (propertize required-context 'face 'pr-review-author-face)
-                                ": "
-                                (propertize "REQUIRED" 'face 'pr-review-error-state-face)
-                                "\n"))))
+                (insert "- "
+                        (propertize required-context 'face 'pr-review-author-face)
+                        ": "
+                        (propertize "REQUIRED" 'face 'pr-review-error-state-face)
+                        "\n")))
             required-contexts))
     (mapc (lambda (node)
             (let-alist node
@@ -781,8 +781,8 @@ it can be displayed in a single line."
         (let-alist pr
           (format "Files changed (%s files; %s additions, %s deleletions)"
                   (length .files.nodes)
-                  (apply '+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
-                  (apply '+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
+                  (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
+                  (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
       (pr-review--insert-diff diff))
     (insert "\n")
     (pr-review--insert-review-action-buttons)
