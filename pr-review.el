@@ -51,8 +51,13 @@
     (define-key map (kbd "C-c C-q") #'pr-review-request-reviews)
     map))
 
-(with-eval-after-load 'evil
-  (when (fboundp 'evil-define-key*)
+(defvar pr-review--mode-map-setup-for-evil-done nil)
+
+(defun pr-review--mode-map-setup-for-evil ()
+  "Setup map in `pr-review-mode-map' for evil mode (if loaded)."
+  (when (and (fboundp 'evil-define-key*)
+             (not pr-review--mode-map-setup-for-evil-done))
+    (setq pr-review--mode-map-setup-for-evil-done t)
     (evil-define-key* '(normal motion) pr-review-mode-map
       (kbd "g r") #'pr-review-refresh
       (kbd "TAB") #'magit-section-toggle
@@ -116,6 +121,7 @@ Which means that all sections are collapsed."
 (define-derived-mode pr-review-mode magit-section-mode "PrReview"
   :interactive nil
   :group 'pr-review
+  (pr-review--mode-map-setup-for-evil)
   (use-local-map pr-review-mode-map)
   (setq-local magit-hunk-section-map nil
               magit-file-section-map nil
