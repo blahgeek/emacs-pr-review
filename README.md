@@ -9,7 +9,7 @@ Review Github Pull Request from Emacs!
 
 ### Install
 
-![](https://melpa.org/packages/pr-review-badge.svg)
+[![](https://melpa.org/packages/pr-review-badge.svg)](https://melpa.org/#/pr-review)
 
 ### Setup github token
 
