@@ -9,14 +9,7 @@ Review Github Pull Request from Emacs!
 
 ### Install
 
-This project is not submitted into MELPA yet. To install, clone this project and add to `load-path`.
-Or, if you're using `use-package` with `straight`:
-
-```elisp
-(use-package pr-review
-  :straight (pr-review :type git :host github :repo "blahgeek/emacs-pr-review"
-                       :files (:defaults "graphql")))
-```
+![](https://melpa.org/packages/pr-review-badge.svg)
 
 ### Setup github token
 
