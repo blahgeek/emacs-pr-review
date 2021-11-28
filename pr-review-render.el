@@ -668,7 +668,7 @@ It will be inserted at the beginning."
   (and (equal (alist-get '__typename item-a) (alist-get '__typename item-b))
        (pcase (alist-get '__typename item-a)
          ("PullRequestCommit"
-          t)
+          (not (let-alist item-a .commit.pushedDate)))
          ((or "AssignedEvent"
               "UnassignedEvent"
               "HeadRefForcePushedEvent"
