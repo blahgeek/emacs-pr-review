@@ -38,6 +38,11 @@
                  (string :tag "Username value"))
   :group 'pr-review)
 
+(defcustom pr-review-ghub-host ghub-default-host
+  "Ghub host used by `pr-review', useful for enterprise github instances."
+  :type 'string
+  :group 'pr-review)
+
 (defvar pr-review--bin-dir (file-name-directory (or load-file-name buffer-file-name)))
 
 (defun pr-review--get-graphql (name)
@@ -52,7 +57,8 @@
   (let ((res (ghub-graphql (pr-review--get-graphql name)
                            variables
                            :auth pr-review-ghub-auth-name
-                           :username pr-review-ghub-username)))
+                           :username pr-review-ghub-username
+                           :host pr-review-ghub-host)))
     (let-alist res
       (when .errors
         (message "%s" res)
@@ -88,7 +94,8 @@ Also fix the result so that it looks like result of git diff --no-prefix."
                     :headers '(("Accept" . "application/vnd.github.v3.diff"))
                     :reader 'ghub--decode-payload
                     :auth pr-review-ghub-auth-name
-                    :username pr-review-ghub-username)))
+                    :username pr-review-ghub-username
+                    :host pr-review-ghub-host)))
     ;; magit-diff expects diff with --no-prefix
     (setq res (replace-regexp-in-string
                (rx line-start "diff --git a/" (group-n 1 (+? not-newline)) " b/" (backref 1) line-end)
@@ -128,7 +135,8 @@ If HEAD-OR-BASE is t, fetch the head version; otherwise base version."
                   :headers '(("Accept" . "application/vnd.github.v3.raw"))
                   :reader 'ghub--decode-payload
                   :auth pr-review-ghub-auth-name
-                  :username pr-review-ghub-username)))
+                  :username pr-review-ghub-username
+                  :host pr-review-ghub-host)))
 
 (defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
   "Post review commit reply BODY to TOP-COMMENT-ID at PR-NODE-ID."

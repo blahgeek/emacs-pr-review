@@ -22,6 +22,9 @@ Simply put, add the following line to `~/.authinfo` (replace `<...>` accordingly
 machine api.github.com login <YOUR_USERNAME>^emacs-pr-review password <YOUR_GITHUB_PERSONAL_TOKEN>
 ```
 
+You may customize username and api host (for github enterprise instances) using [ghub](https://magit.vc/manual/ghub/Github-Configuration-Variables.html#Github-Configuration-Variables),
+or you can also set `pr-review-ghub-username` and `pr-review-ghub-host` for pr-review only.
+
 ### Open a PR
 
 There's two entrypoint to open a PR:

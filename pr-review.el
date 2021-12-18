@@ -166,14 +166,16 @@ otherwise, ask interactively."
 ;;;###autoload
 (defun pr-review-url-parse (url)
   "Return pr path (repo-owner repo-name pr-id) for URL, or nil on error."
-  (when (string-match (rx "http" (? "s") "://github.com/"
-                          (group (+ (not ?/))) "/"
-                          (group (+ (not ?/))) "/pull/"
-                          (group (+ (any digit))))
-                      url)
-    (list (match-string 1 url)
-          (match-string 2 url)
-          (string-to-number (match-string 3 url)))))
+  (when-let* ((url-parsed (url-generic-parse-url url))
+              (path (url-filename url-parsed)))
+    (when (and (member (url-type url-parsed) '("http" "https"))
+               (string-match (rx "/" (group (+ (any alphanumeric ?- ?_ ?.)))
+                                 "/" (group (+ (any alphanumeric ?- ?_ ?.)))
+                                 "/pull/" (group (+ (any digit))))
+                             (url-filename url-parsed)))
+      (list (match-string 1 path)
+            (match-string 2 path)
+            (string-to-number (match-string 3 path))))))
 
 (defun pr-review--url-parse-anchor (url)
   "Return anchor id for URL, or nil on error.

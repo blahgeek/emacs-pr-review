@@ -348,8 +348,7 @@ Used for interactive selection one of them."
 (defun pr-review-open-in-default-browser ()
   "Open current PR in default browser."
   (interactive)
-  (browse-url-default-browser (apply #'format "https://github.com/%s/%s/pull/%s"
-                                     pr-review--pr-path)))
+  (browse-url-default-browser (alist-get 'url pr-review--pr-info)))
 
 ;; general dispatching functions, call other functions based on current context
 
