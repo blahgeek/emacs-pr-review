@@ -105,8 +105,7 @@ Also fix the result so that it looks like result of git diff --no-prefix."
                (rx line-start (group-n 1 (or "+++" "---")) " " (or "a/" "b/") (group-n 2 (+? not-newline)) line-end)
                "\\1 \\2"
                res))
-    ;; don't why, just need an extra new line
-    (concat res "\n")))
+    res))
 
 (defvar-local pr-review--compare-cache-refs nil)
 (defvar-local pr-review--compare-cache-result nil)
