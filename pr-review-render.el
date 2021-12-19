@@ -573,10 +573,11 @@ It will be inserted at the beginning."
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
                                   (pr-review--propertize-keyword
                                    (or (alist-get 'state status-check-rollup) "UNKNOWN"))))
-    (let ((valid-contexts (mapcar (lambda (node) (alist-get 'context node))
-                                  (let-alist status-check-rollup .contexts.nodes))))
+    (let ((valid-context-or-names (mapcar (lambda (node) (or (alist-get 'context node)
+                                                             (alist-get 'name node)))
+                                          (let-alist status-check-rollup .contexts.nodes))))
       (mapc (lambda (required-context)
-              (unless (member required-context valid-contexts)
+              (unless (member required-context valid-context-or-names)
                 (insert "- "
                         (propertize required-context 'face 'pr-review-author-face)
                         ": "
