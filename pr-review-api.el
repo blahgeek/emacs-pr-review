@@ -52,13 +52,17 @@
      (concat pr-review--bin-dir "graphql/" (symbol-name name) ".graphql"))
     (buffer-substring-no-properties (point-min) (point-max))))
 
+(defun pr-review--ghub-common-request-args ()
+  "Return common args for `ghub-request' and `ghub-graphql'."
+  (list :auth pr-review-ghub-auth-name
+        :username pr-review-ghub-username
+        :host pr-review-ghub-host))
+
 (defun pr-review--execute-graphql (name variables)
   "Execute graphql from file NAME.graphql with VARIABLES, return result."
-  (let ((res (ghub-graphql (pr-review--get-graphql name)
-                           variables
-                           :auth pr-review-ghub-auth-name
-                           :username pr-review-ghub-username
-                           :host pr-review-ghub-host)))
+  (let ((res (apply #'ghub-graphql
+                    (pr-review--get-graphql name) variables
+                    (pr-review--ghub-common-request-args))))
     (let-alist res
       (when .errors
         (message "%s" res)
@@ -86,16 +90,14 @@ Also fix the result so that it looks like result of git diff --no-prefix."
               (repo-name (cadr pr-review--pr-path))
               ;; res may be nil (if the ref is deleted)
               ;; in which case we will return nil
-              (res (ghub-request
+              (res (apply #'ghub-request
                     "GET"
                     (format "/repos/%s/%s/compare/%s...%s"
                             repo-owner repo-name base-ref head-ref)
                     '()
                     :headers '(("Accept" . "application/vnd.github.v3.diff"))
                     :reader 'ghub--decode-payload
-                    :auth pr-review-ghub-auth-name
-                    :username pr-review-ghub-username
-                    :host pr-review-ghub-host)))
+                    (pr-review--ghub-common-request-args))))
     ;; magit-diff expects diff with --no-prefix
     (setq res (replace-regexp-in-string
                (rx line-start "diff --git a/" (group-n 1 (+? not-newline)) " b/" (backref 1) line-end)
@@ -130,12 +132,11 @@ If HEAD-OR-BASE is t, fetch the head version; otherwise base version."
                            ('head 'headRefOid)
                            ('base 'baseRefOid))
                          pr-review--pr-info)))
-    (ghub-request "GET" url `((ref . ,ref))
-                  :headers '(("Accept" . "application/vnd.github.v3.raw"))
-                  :reader 'ghub--decode-payload
-                  :auth pr-review-ghub-auth-name
-                  :username pr-review-ghub-username
-                  :host pr-review-ghub-host)))
+    (apply #'ghub-request
+           "GET" url `((ref . ,ref))
+           :headers '(("Accept" . "application/vnd.github.v3.raw"))
+           :reader 'ghub--decode-payload
+           (pr-review--ghub-common-request-args))))
 
 (defun pr-review--post-review-comment-reply (pr-node-id top-comment-id body)
   "Post review commit reply BODY to TOP-COMMENT-ID at PR-NODE-ID."
