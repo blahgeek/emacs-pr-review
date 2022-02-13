@@ -32,6 +32,8 @@
 (require 'pr-review-input)
 (require 'pr-review-render)
 (require 'pr-review-action)
+(require 'pr-review-notification)
+(require 'tabulated-list)
 
 (defun pr-review--confirm-kill-buffer ()
   "Hook for `kill-buffer-query-functions', confirm if there's pending reviews."
@@ -171,7 +173,7 @@ otherwise, ask interactively."
     (when (and (member (url-type url-parsed) '("http" "https"))
                (string-match (rx "/" (group (+ (any alphanumeric ?- ?_ ?.)))
                                  "/" (group (+ (any alphanumeric ?- ?_ ?.)))
-                                 "/pull/" (group (+ (any digit))))
+                                 "/pull" (? "s") "/" (group (+ (any digit))))
                              (url-filename url-parsed)))
       (list (match-string 1 path)
             (match-string 2 path)
@@ -281,6 +283,16 @@ When called interactively, you will be asked to enter the QUERY."
                                        nil 'require-match)))
     (when-let ((selected-url (alist-get selected-pr prs-alist nil nil 'equal)))
       (pr-review-open-url selected-url))))
+
+;;;###autoload
+(defun pr-review-notification ()
+  "Show github notifications in a new buffer."
+  (interactive)
+  (with-current-buffer (get-buffer-create "*pr-review notifications*")
+    (pr-review-notification-list-mode)
+    (pr-review--notification-refresh)
+    (tabulated-list-print)
+    (switch-to-buffer (current-buffer))))
 
 
 (provide 'pr-review)
