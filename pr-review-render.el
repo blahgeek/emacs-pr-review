@@ -308,7 +308,8 @@ It will be inserted at the beginning."
            'face 'pr-review-button-face
            'action (lambda (_)
                      (push-mark)
-                     (pr-review--goto-section-with-value .id)))
+                     (pr-review--goto-section-with-value .id)
+                     (recenter)))
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
@@ -348,7 +349,8 @@ It will be inserted at the beginning."
                    'action (lambda (_)
                              (push-mark)
                              (let-alist review-thread
-                               (pr-review--goto-diff-line .path .diffSide .line)))))
+                               (pr-review--goto-diff-line .path .diffSide .line)
+                               (recenter)))))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
