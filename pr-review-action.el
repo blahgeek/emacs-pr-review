@@ -443,7 +443,13 @@ This will override all existing reviewers (will clear all reviewers on empty).
 When called interactively, user can select reviewers from list."
   (interactive
    (list
-    (let ((assignable-users (pr-review--get-assignable-users)))
+    (let* ((assignable-users (pr-review--get-assignable-users))
+           (login-to-name (make-hash-table :test 'equal))
+           (completion-extra-properties
+            (list :annotation-function (lambda (login)
+                                         (concat " " (gethash login login-to-name ""))))))
+      (mapc (lambda (usr) (puthash (alist-get 'login usr) (alist-get 'name usr) login-to-name))
+            assignable-users)
       (completing-read-multiple
        "Request review: "
        (mapcar (lambda (usr) (alist-get 'login usr)) assignable-users)
