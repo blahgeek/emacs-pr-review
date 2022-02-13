@@ -28,7 +28,7 @@
 (require 'tabulated-list)
 (require 'cl-seq)
 
-(declare-function pr-review "pr-review")
+(declare-function pr-review-open "pr-review")
 
 (defface pr-review-notification-unread-face
   '((t :inherit bold))
@@ -207,10 +207,14 @@ Confirm if there's pending mark read entries."
         (push (list .id .updated_at) pr-review--notification-pending-mark-read)
         (tabulated-list-put-tag "-"))
       (if (equal .subject.type "PullRequest")
-          (pr-review (replace-regexp-in-string
-                      (rx "api." (group (+ (any alphanumeric ?- ?_ ?.)))
-                          "/repos/")
-                      "\\1/" .subject.url))
+          (let ((pr-id (when (string-match (rx (group (+ (any digit))) eos) .subject.url)
+                         (match-string 1 .subject.url)))
+                (anchor (when (string-match (rx (group (+ (any digit))) eos) (or .subject.latest_comment_url ""))
+                          (match-string 1 .subject.latest_comment_url))))
+            (pr-review-open .repository.owner.login .repository.name
+                            (string-to-number pr-id)
+                            nil  ;; new window
+                            anchor))
         (browse-url .subject.url)))))
 
 (provide 'pr-review-notification)
