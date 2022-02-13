@@ -242,25 +242,28 @@ BODY: review comment body."
     .search.nodes))
 
 (defun pr-review--get-assignable-users-1 (repo-owner repo-name)
-  "Get a list of assignable users for REPO-OWNER/REPO-NAME."
+  "Get assignable users for REPO-OWNER/REPO-NAME.
+Return hashtable of login -> alist of 'id, 'login, 'name."
   (let ((has-next-page t)
-        cursor res)
+        (res (make-hash-table :test 'equal))
+        cursor)
     (while has-next-page
       (let-alist (pr-review--execute-graphql 'get-assignable-users
                                              `((repo_owner . ,repo-owner)
                                                (repo_name . ,repo-name)
                                                (cursor . ,cursor)))
+        (mapc (lambda (usr) (puthash (alist-get 'login usr) usr res))
+              .repository.assignableUsers.nodes)
         (setq has-next-page .repository.assignableUsers.pageInfo.hasNextPage
-              cursor .repository.assignableUsers.pageInfo.endCursor
-              res (append res .repository.assignableUsers.nodes))))
+              cursor .repository.assignableUsers.pageInfo.endCursor)))
     res))
 
 ;; alist of (repo-owner . repo-name) -> users
 (defvar pr-review--cached-assignable-users nil)
 
 (defun pr-review--get-assignable-users ()
-  "Get a list of assignable users (alist of 'id, 'login, 'name)
-for current PR, cached."
+  "Get assignable users for current PR, cached.
+See `pr-review--get-assignable-users-1' for return format."
   (let ((repo-owner (car pr-review--pr-path))
         (repo-name (cadr pr-review--pr-path)))
     (if-let ((res (alist-get (cons repo-owner repo-name)

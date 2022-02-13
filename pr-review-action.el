@@ -444,15 +444,13 @@ When called interactively, user can select reviewers from list."
   (interactive
    (list
     (let* ((assignable-users (pr-review--get-assignable-users))
-           (login-to-name (make-hash-table :test 'equal))
            (completion-extra-properties
-            (list :annotation-function (lambda (login)
-                                         (concat " " (gethash login login-to-name ""))))))
-      (mapc (lambda (usr) (puthash (alist-get 'login usr) (alist-get 'name usr) login-to-name))
-            assignable-users)
+            (list :annotation-function
+                  (lambda (login)
+                    (concat " " (alist-get 'name (gethash login assignable-users)))))))
       (completing-read-multiple
        "Request review: "
-       (mapcar (lambda (usr) (alist-get 'login usr)) assignable-users)
+       (hash-table-keys assignable-users)
        nil 'require-match
        (string-join
         (mapcar (lambda (reviewer) (let-alist reviewer .requestedReviewer.login))
@@ -460,9 +458,7 @@ When called interactively, user can select reviewers from list."
         ",")))))
   (let* ((assignable-users (pr-review--get-assignable-users))
          (ids (mapcar (lambda (login)
-                        (let ((usr (seq-find (lambda (elem)
-                                               (equal (alist-get 'login elem) login))
-                                             assignable-users)))
+                        (let ((usr (gethash login assignable-users)))
                           (unless usr
                             (error "User %s not found" login))
                           (alist-get 'id usr)))

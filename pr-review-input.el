@@ -59,11 +59,15 @@
 (defun pr-review-input-mention-user ()
   "Insert @XXX at current point to mention an user."
   (interactive)
-  (let ((user (completing-read
-               "Mention user: "
-               (mapcar (lambda (u) (alist-get 'login u))
-                       (pr-review--get-assignable-users))
-               nil 'require-match)))
+  (let* ((assignable-users (pr-review--get-assignable-users))
+         (completion-extra-properties
+          (list :annotation-function
+                (lambda (login)
+                  (concat " " (alist-get 'name (gethash login assignable-users))))))
+         (user (completing-read
+                "Mention user: "
+                (hash-table-keys assignable-users)
+                nil 'require-match)))
     (insert "@" user " ")))
 
 (declare-function pr-review-refresh "pr-review")
