@@ -279,5 +279,25 @@ for current PR, cached."
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (userIds . ,user-node-ids))))))
 
+(defvar pr-review--get-notifications-per-page 50)
+
+(defun pr-review--get-notifications (include-read page)
+  "Get a list of notifications.
+If INCLUDE-READ is not nil, all notifications are returned,
+PAGE is the number of pages of the notifications, start from 1."
+  (apply #'ghub-request
+         "GET" "/notifications"
+         `((all . ,(if include-read "true" "false"))
+           (per_page . ,(number-to-string pr-review--get-notifications-per-page))
+           (page . ,(number-to-string page)))
+         (pr-review--ghub-common-request-args)))
+
+(defun pr-review--mark-notification-read (id)
+  "Mark notification ID as read."
+  (apply #'ghub-request
+         "PATCH" (format "/notifications/threads/%s" id)
+         '()
+         (pr-review--ghub-common-request-args)))
+
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here
