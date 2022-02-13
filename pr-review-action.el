@@ -433,7 +433,9 @@ When called interactively, user can select filepath from list."
                       nil 'require-match)))
   (when-let ((section (seq-find (lambda (section) (equal (oref section value) filepath))
                                 (pr-review--find-all-file-sections magit-root-section))))
-    (goto-char (oref section start))))
+    (push-mark)
+    (goto-char (oref section start))
+    (recenter)))
 
 (defun pr-review-request-reviews (reviewer-logins)
   "Request reviewers for current PR, with a list of usernames REVIEWER-LOGINS.
