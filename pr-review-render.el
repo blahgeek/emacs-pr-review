@@ -39,11 +39,6 @@
   :type 'integer
   :group 'pr-review)
 
-(defcustom pr-review-generated-file-regexp ".*generated/.*"
-  "Regexe that match generated files, which would be collapsed in review."
-  :type 'regexp
-  :group 'pr-review)
-
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
@@ -226,19 +221,14 @@ MARGIN count of spaces are added at the start of every line."
           (when (cdr current-left-right)
             (add-text-properties
              (point) (1+ (point))
-             `(pr-review-diff-line-right ,(cons filename (cdr current-left-right))))))))
-    (save-excursion
-      (goto-char beg)
-      (let ((match))
-        (while (setq match
-                     (text-property-search-forward
-                      'magit-section nil
-                      (lambda (_ section-data)
-                        (and section-data
-                             (magit-file-section-p section-data)
-                             (string-match-p pr-review-generated-file-regexp
-                                             (oref section-data value))))))
-          (magit-section-hide (prop-match-value match)))))))
+             `(pr-review-diff-line-right ,(cons filename (cdr current-left-right))))))))))
+
+(defun pr-review--hide-generated-files ()
+  "Hide file sections for generated files."
+  (mapc (lambda (section)
+          (when (string-match-p pr-review-generated-file-regexp (oref section value))
+            (magit-section-hide section)))
+        (pr-review--find-all-file-sections magit-root-section)))
 
 (defun pr-review--find-section-with-value (value)
   "Find and return the magit section object matching VALUE."
@@ -820,7 +810,9 @@ it can be displayed in a single line."
       (magit-insert-heading
         (propertize (alist-get 'title pr)'face 'pr-review-title-face)))
     (insert "\n")
-    (pr-review--insert-pr-body pr diff)))
+    (pr-review--insert-pr-body pr diff))
+  ;; need to call after this inserting all sections
+  (pr-review--hide-generated-files))
 
 
 (provide 'pr-review-render)

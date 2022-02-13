@@ -158,5 +158,10 @@
 (defvar-local pr-review--pr-info nil "Result of fetch-pr-info, useful for actions.")
 (defvar-local pr-review--pending-review-threads nil)
 
+(defcustom pr-review-generated-file-regexp ".*generated/.*"
+  "Regexe that match generated files, which would be collapsed in review."
+  :type 'regexp
+  :group 'pr-review)
+
 (provide 'pr-review-common)
 ;;; pr-review-common.el ends here
