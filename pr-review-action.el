@@ -479,7 +479,8 @@ When called interactively, user can select reviewers from list."
                                     target))))))
         (setq pos (prop-match-beginning match))))
     (when pos
-      (goto-char pos))))
+      (goto-char pos)
+      (recenter))))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

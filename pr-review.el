@@ -200,12 +200,12 @@ location after open."
       (pr-review-mode))
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
     (pr-review-refresh)
-    (when anchor
-      (pr-review-goto-database-id anchor))
     (funcall (if new-window
                  'switch-to-buffer-other-window
                'switch-to-buffer)
-             (current-buffer))))
+             (current-buffer))
+    (when anchor  ;; need to call this after switching to buffer as required by `recenter'
+      (pr-review-goto-database-id anchor))))
 
 (defun pr-review--find-url-in-buffer ()
   "Return a possible pr url in current buffer.
