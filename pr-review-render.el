@@ -144,8 +144,9 @@ MARGIN count of spaces are added at the start of every line."
       (erase-buffer)
       (insert "\n"  ;; insert a newline at first line (and ignore later)
                     ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
-              (replace-regexp-in-string "\r\n" "\n" body nil t)
-              " \n")
+              (replace-regexp-in-string "\r\n" "\n" body nil t))
+      (unless (string-suffix-p "\n" body)
+        (insert "\n"))
       (unless (eq major-mode lang-mode)
         (funcall lang-mode))
       (condition-case-unless-debug nil
