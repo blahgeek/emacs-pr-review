@@ -207,13 +207,14 @@ If RESOLVE-OR-UNRESOLVE is non-nil, do resolve; otherwise do unresolve."
 EVENT: review action, e.g. APPROVE;
 PENDING-THREADS: inline review threads;
 BODY: review comment body."
-  (pr-review--execute-graphql
-   'add-review
-   `((input . ((body . ,body)
-               (commitOID . ,commit-id)
-               (event . ,event)
-               (pullRequestId . ,pr-node-id)
-               (threads . ,pending-threads))))))
+  (let ((input `((body . ,body)
+                 (commitOID . ,commit-id)
+                 (event . ,event)
+                 (pullRequestId . ,pr-node-id))))
+    (when pending-threads
+      (setq input (cons `(threads . ,pending-threads) input)))
+    (pr-review--execute-graphql 'add-review
+                                `((input . ,input)))))
 
 (defun pr-review--post-merge-pr (pr-node-id method)
   "Send API request to merge pr PR-NODE-ID with METHOD."
