@@ -141,9 +141,11 @@ When a region is active, the review thread is added for multiple lines."
         (message "Cannot add review thread at current point")
       (setq review-thread `((path . ,(cadr line-info))
                             (line . ,(cddr line-info))
-                            (side . ,(car line-info))
-                            (startLine . ,(cddr start-line-info))
-                            (startSide . ,(car start-line-info))))
+                            (side . ,(car line-info))))
+      (when start-line-info
+        (setq review-thread (append `((startLine . ,(cddr start-line-info))
+                                      (startSide . ,(car start-line-info)))
+                                    review-thread)))
       (when (use-region-p)
         (setq region-text (replace-regexp-in-string
                            (rx line-start (any ?+ ?- ?\s)) ""
