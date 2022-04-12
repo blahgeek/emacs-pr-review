@@ -247,12 +247,14 @@ BODY: review comment body."
 Return hashtable of login -> alist of 'id, 'login, 'name."
   (let ((has-next-page t)
         (res (make-hash-table :test 'equal))
+        args
         cursor)
     (while has-next-page
-      (let-alist (pr-review--execute-graphql 'get-assignable-users
-                                             `((repo_owner . ,repo-owner)
-                                               (repo_name . ,repo-name)
-                                               (cursor . ,cursor)))
+      (setq args `((repo_owner . ,repo-owner)
+                   (repo_name . ,repo-name)))
+      (when cursor
+        (setq args (cons `(cursor . ,cursor) args)))
+      (let-alist (pr-review--execute-graphql 'get-assignable-users args)
         (mapc (lambda (usr) (puthash (alist-get 'login usr) usr res))
               .repository.assignableUsers.nodes)
         (setq has-next-page .repository.assignableUsers.pageInfo.hasNextPage
