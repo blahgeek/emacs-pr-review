@@ -65,6 +65,11 @@
   (insert-button title 'face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
+(defun pr-review--make-link (title url)
+  "Make a link (as string) of URL with TITLE."
+  (button-buttonize (propertize title 'face 'pr-review-link-face)
+                    (lambda (_) (browse-url url))))
+
 (defun pr-review--dom-string (dom)
   "Return string of DOM."
   (mapconcat (lambda (sub)
@@ -512,7 +517,13 @@ It will be inserted at the beginning."
                    " -> "
                    (propertize
                     (let-alist (car (last .groupedItems)) .afterCommit.abbreviatedOid)
-                    'face 'pr-review-hash-face)))))
+                    'face 'pr-review-hash-face)))
+                 ("CrossReferencedEvent"
+                  (list
+                   (propertize "Mentioned by " 'face 'magit-section-heading)
+                   (pr-review--propertize-username .actor.login)
+                   (propertize " in " 'face 'magit-section-heading)
+                   (pr-review--make-link .source.title .source.url)))))
         (when .createdAt
           (concat
            " - "
