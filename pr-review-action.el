@@ -186,7 +186,8 @@ When a region is active, the review thread is added for multiple lines."
 (defun pr-review-edit-or-add-pending-review-thread ()
   "Edit pending review thread or add a new one, depending on the current point."
   (interactive)
-  (or (pr-review-edit-pending-review-thread)
+  (or (and (not (use-region-p))  ;; if region is active, always add instead of edit
+           (pr-review-edit-pending-review-thread))
       (pr-review-add-pending-review-thread)))
 
 (defun pr-review--submit-review-exit-callback (orig-buffer event body)
