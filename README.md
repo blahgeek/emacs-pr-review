@@ -41,7 +41,8 @@ Suggested config (especially for evil users):
 ```
 
 Note that `pr-review` will use the URL in current context as the default input.
-It also works with the `notmuch` email client: try it when viewing the github notification email.
+My personal recommended workflow would be using [notmuch](https://notmuchmail.org/notmuch-emacs/) to
+receive and read all github notification emails and start `pr-review` from the notmuch message buffer.
 
 ### Keybindings in PrReview buffer
 
