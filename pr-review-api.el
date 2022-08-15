@@ -285,6 +285,13 @@ See `pr-review--get-assignable-users-1' for return format."
                               `((input . ((pullRequestId . ,pr-node-id)
                                           (userIds . ,user-node-ids))))))
 
+(defun pr-review--post-subscription-update (pr-node-id state)
+  "Send API request to update subscription to STATE for PR-NODE-ID."
+  (pr-review--execute-graphql
+   'update-subscription
+   `((input . ((state . ,state)
+               (subscribableId . ,pr-node-id))))))
+
 (defvar pr-review--get-notifications-per-page 50)
 
 (defun pr-review--get-notifications (include-read page)

@@ -575,6 +575,14 @@ It will be inserted at the beginning."
                          .assignees.nodes ", ")
               "\n"))))
 
+(defun pr-review--insert-subscription-info (pr-info)
+  "Insert subscription info and actions for PR-INFO."
+  (let-alist pr-info
+    (when .viewerCanSubscribe
+      (insert-button .viewerSubscription
+                     'face 'pr-review-button-face
+                     'action (lambda (_) (call-interactively #'pr-review-update-subscription))))))
+
 (defun pr-review--insert-commit-section (commits)
   "Insert commit section for a list of COMMITS."
   (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
@@ -769,7 +777,9 @@ it can be displayed in a single line."
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "
               (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
-              "\n\n")
+              " - ")
+      (pr-review--insert-subscription-info pr)
+      (insert "\n\n")
       (pr-review--insert-reviewers-info pr)
       (pr-review--insert-assignees-info pr)
       (insert "\n")

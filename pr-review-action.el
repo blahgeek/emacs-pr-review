@@ -39,6 +39,9 @@
 (defconst pr-review--merge-methods '("MERGE" "REBASE" "SQUASH")
   "Available methods for `pr-review-merge'.")
 
+(defconst pr-review--subscription-states '("IGNORED" "SUBSCRIBED" "UNSUBSCRIBED")
+  "Available states for `pr-review-update-subscription'.")
+
 (defun pr-review--insert-quoted-content (body)
   "Insert BODY as quoted in markdown format."
   (when body
@@ -467,6 +470,16 @@ When called interactively, user can select reviewers from list."
                           (alist-get 'id usr)))
                       reviewer-logins)))
     (pr-review--post-request-reviews (alist-get 'id pr-review--pr-info) ids)
+    (pr-review-refresh)))
+
+(defun pr-review-update-subscription (state)
+  "Update subscription to STATE for current PR.
+Valid state (string): IGNORED, SUBSCRIBED, UNSUBSCRIBED."
+  (interactive (list (completing-read "Update subscription: "
+                                      pr-review--subscription-states
+                                      nil 'require-match)))
+  (when (member state pr-review--subscription-states)
+    (pr-review--post-subscription-update (alist-get 'id pr-review--pr-info) state)
     (pr-review-refresh)))
 
 (defun pr-review-goto-database-id (database-id)
