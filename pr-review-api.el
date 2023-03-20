@@ -38,9 +38,10 @@
                  (string :tag "Username value"))
   :group 'pr-review)
 
-(defcustom pr-review-ghub-host ghub-default-host
-  "Ghub host used by `pr-review', useful for enterprise github instances."
-  :type 'string
+(defcustom pr-review-ghub-host nil
+  "Ghub host used by `pr-review', see `ghub-request' for details."
+  :type '(choice (const :tag "Read from config" nil)
+                 (string :tag "Host value"))
   :group 'pr-review)
 
 (defvar pr-review--bin-dir (file-name-directory (or load-file-name buffer-file-name)))
