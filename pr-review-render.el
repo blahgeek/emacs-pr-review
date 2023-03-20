@@ -512,11 +512,13 @@ It will be inserted at the beginning."
                    (pr-review--propertize-username .actor.login)
                    " - "
                    (propertize
-                    (let-alist (car .groupedItems) .beforeCommit.abbreviatedOid)
+                    (let-alist (car .groupedItems)
+                      (or .beforeCommit.abbreviatedOid "?"))
                     'face 'pr-review-hash-face)
                    " -> "
                    (propertize
-                    (let-alist (car (last .groupedItems)) .afterCommit.abbreviatedOid)
+                    (let-alist (car (last .groupedItems))
+                      (or .afterCommit.abbreviatedOid "?"))
                     'face 'pr-review-hash-face)))
                  ("CrossReferencedEvent"
                   (list
