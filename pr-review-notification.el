@@ -77,12 +77,6 @@
   (use-local-map pr-review-notification-list-mode-map)
   (setq-local pr-review--notification-page 1
               pr-review--notification-include-read t)
-  (setq-local tabulated-list-format
-              [("Repo" 25 t)
-               ("Type" 12 t)
-               ("Title" 65 nil)
-               ("Updated at" 22 pr-review--notification-entry-sort-updated-at)
-               ("Reason" 15 t)])
 
   (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh)
   (add-to-list 'kill-buffer-query-functions 'pr-review--notification-confirm-kill-buffer)
@@ -125,7 +119,8 @@ Confirm if there's mark entries."
          ('delete "D")
          (_ ""))))
     (when (alist-get 'unread entry)
-      (add-face-text-property beg (point) 'pr-review-notification-unread-face))))
+      (add-face-text-property beg (point) 'pr-review-notification-unread-face))
+    (pulse-momentary-highlight-region 0 (point))))
 
 (defun pr-review--notification-format-type (entry)
   "Format type column of notification ENTRY."
@@ -160,10 +155,32 @@ Confirm if there's mark entries."
             (when commenters
               (format "{%s}" (string-join commenters ", "))))))
 
+(defun pr-review--notification-format-time (time-str)
+  "Format TIME-STR as human readable relative string."
+  (let* ((time (date-to-time time-str))
+         (delta (float-time (time-subtract (current-time) time))))
+    (cond
+     ((< delta 3600)
+      (format "%.0f min. ago" (/ delta 60)))
+     ((equal (time-to-days time) (time-to-days (current-time)))
+      (format-time-string "Today %H:%M" time))
+     ((< delta (* 5 24 3600))
+      (format-time-string "%a. %H:%M" time))
+     ((< delta (* 365 24 3600))
+      (format-time-string "%b %d" time))
+     (t
+      (format-time-string "%b %d, %Y" time)))))
+
 (defun pr-review--notification-refresh ()
   "Refresh notification buffer."
   (unless (eq major-mode 'pr-review-notification-list-mode)
     (error "Only available in pr-review-notification-list-mode"))
+
+  (setq-local tabulated-list-format
+              [("Updated at" 12 pr-review--notification-entry-sort-updated-at)
+               ("Type" 12 t)
+               ("Title" 85 nil)
+               ("Notable activities" 25 nil)])
   (let* ((resp-orig (pr-review--get-notifications-with-extra-pr-info
                      pr-review--notification-include-read
                      pr-review--notification-page))
@@ -196,10 +213,9 @@ Confirm if there's mark entries."
                (let-alist entry
                  (list entry
                        (vector
-                        .repository.full_name
+                        (pr-review--notification-format-time .updated_at)
                         (pr-review--notification-format-type entry)
-                        .subject.title
-                        (format-time-string "%b %d, %Y, %H:%M" (date-to-time .updated_at))
+                        (format "[%s] %s" .repository.full_name .subject.title)
                         (pr-review--notification-format-notable-activities entry)
                         ;; .reason
                         ))))
