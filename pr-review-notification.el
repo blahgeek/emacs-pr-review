@@ -127,12 +127,44 @@ Confirm if there's pending mark read entries."
           (tabulated-list-put-tag "*")))
       (add-face-text-property beg (point) 'pr-review-notification-unread-face))))
 
+
+(defun pr-review--notification-format-type (entry)
+  "Format type column of notification ENTRY."
+  (let-alist entry
+    (if (not (equal .subject.type "PullRequest"))
+        .subject.type
+      (format "PR %s" .pr-info.state))))
+
+(defun pr-review--notification-format-notable-activities (entry)
+  "Format 'notable activities since last read' column for notification ENTRY."
+  (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
+        mentioned assigned review-requested commenters)
+    (dolist (timeline-item (let-alist entry .pr-info.timelineItemsSince.nodes))
+      (let-alist timeline-item
+        (pcase .__typename
+          ("AssignedEvent" (when (equal my-login .assignee.login)
+                             (setq assigned t)))
+          ("ReviewRequestedEvent" (when (equal my-login .requestedReviewer.login)
+                                    (setq review-requested t)))
+          ("MentionedEvent" (when (equal my-login .actor.login)
+                              (setq mentioned t)))
+          ((or "IssueComment" "PullRequestReview")
+           (unless (equal my-login .author.login)
+             (push .author.login commenters)))
+          )))
+    (concat (when assigned "ASSIGNED ")
+            (when mentioned "MENTIONED ")
+            (when review-requested "REVIEW-REQUESTED ")
+            (when commenters
+              (format "COMMENTED (%s)" (string-join commenters ", "))))))
+
 (defun pr-review--notification-refresh ()
   "Refresh notification buffer."
   (unless (eq major-mode 'pr-review-notification-list-mode)
     (error "Only available in pr-review-notification-list-mode"))
-  (let ((resp (pr-review--get-notifications pr-review--notification-include-read
-                                            pr-review--notification-page)))
+  (let ((resp (pr-review--get-notifications-with-extra-pr-info
+               pr-review--notification-include-read
+               pr-review--notification-page)))
     (setq-local header-line-format
                 (substitute-command-keys
                  (format "Page %d, %d items, %s. Go next/prev page with `\\[pr-review-notification-next-page]'/`\\[pr-review-notification-prev-page]'. Toggle unread filter with `\\[pr-review-notification-toggle-unread-filter]'"
@@ -146,12 +178,15 @@ Confirm if there's pending mark read entries."
                  (list entry
                        (vector
                         .repository.full_name
-                        .subject.type
+                        (pr-review--notification-format-type entry)
                         .subject.title
                         (format-time-string "%b %d, %Y, %H:%M" (date-to-time .updated_at))
-                        .reason))))
+                        (pr-review--notification-format-notable-activities entry)
+                        ;; .reason
+                        ))))
              resp))
-    (tabulated-list-init-header)))
+    (tabulated-list-init-header)
+    (message "Notifications refreshed, %d items." (length resp))))
 
 (defun pr-review-notification-next-page ()
   "Go to next page of `pr-review-notification-list-mode'."
