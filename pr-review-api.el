@@ -318,8 +318,15 @@ PAGE is the number of pages of the notifications, start from 1."
          '()
          (pr-review--ghub-common-request-args)))
 
+(defun pr-review--delete-notification (id)
+  "Delete notification ID."
+  (apply #'ghub-request
+         "DELETE" (format "/notifications/threads/%s/subscription" id)
+         '()
+         (pr-review--ghub-common-request-args)))
 
-(defvar pr-preview--whoami-cache nil "Cache for `pr-review--whoami'.")
+
+(defvar pr-review--whoami-cache nil "Cache for `pr-review--whoami'.")
 
 (defun pr-review--whoami ()
   "Return current user info."

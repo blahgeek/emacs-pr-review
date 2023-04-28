@@ -1,12 +1,8 @@
 repository(owner: "%1$s", name: "%2$s") {
   pullRequest(number: %3$d) {
     state
+    viewerSubscription
     author { login }
-    participants(last: 20) {
-      nodes {
-        login
-      }
-    }
     timelineItemsSince: timelineItems(since: "%4$s", last: 50, itemTypes: [ASSIGNED_EVENT, REVIEW_REQUESTED_EVENT, MENTIONED_EVENT, ISSUE_COMMENT, PULL_REQUEST_REVIEW]) {
       nodes {
         __typename
