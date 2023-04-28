@@ -307,7 +307,7 @@ See `pr-review--get-assignable-users-1' for return format."
 
 (defun pr-review--whoami-cached ()
   "Return current user info, cached."
-  (or (pr-review--whoami)
+  (or pr-review--whoami-cache
       (setq pr-review--whoami-cache (pr-review--whoami))))
 
 (defun pr-review--batch-get-pr-info-for-notifications (prs)
