@@ -261,7 +261,8 @@ Confirm if there's mark entries."
   (when-let ((entry (pr-review-notification-remove-mark)))
     (let-alist entry
       (push (list .id 'read .updated_at) pr-review--notification-marks)
-      (tabulated-list-put-tag "-"))))
+      (tabulated-list-put-tag "-"))
+    (forward-line)))
 
 (defun pr-review-notification-mark-delete ()
   "Mark the entry in current line as delete."
@@ -269,7 +270,8 @@ Confirm if there's mark entries."
   (when-let ((entry (pr-review-notification-remove-mark)))
     (let-alist entry
       (push (list .id 'delete .updated_at) pr-review--notification-marks)
-      (tabulated-list-put-tag "D"))))
+      (tabulated-list-put-tag "D"))
+    (forward-line)))
 
 (defun pr-review-notification-execute-mark ()
   "Really execute all mark."

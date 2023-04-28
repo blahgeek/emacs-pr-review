@@ -298,33 +298,6 @@ See `pr-review--get-assignable-users-1' for return format."
    `((input . ((state . ,state)
                (subscribableId . ,pr-node-id))))))
 
-(defvar pr-review--get-notifications-per-page 50)
-
-(defun pr-review--get-notifications (include-read page)
-  "Get a list of notifications.
-If INCLUDE-READ is not nil, all notifications are returned,
-PAGE is the number of pages of the notifications, start from 1."
-  (apply #'ghub-request
-         "GET" "/notifications"
-         `((all . ,(if include-read "true" "false"))
-           (per_page . ,(number-to-string pr-review--get-notifications-per-page))
-           (page . ,(number-to-string page)))
-         (pr-review--ghub-common-request-args)))
-
-(defun pr-review--mark-notification-read (id)
-  "Mark notification ID as read."
-  (apply #'ghub-request
-         "PATCH" (format "/notifications/threads/%s" id)
-         '()
-         (pr-review--ghub-common-request-args)))
-
-(defun pr-review--delete-notification (id)
-  "Delete notification ID."
-  (apply #'ghub-request
-         "DELETE" (format "/notifications/threads/%s/subscription" id)
-         '()
-         (pr-review--ghub-common-request-args)))
-
 
 (defvar pr-review--whoami-cache nil "Cache for `pr-review--whoami'.")
 
@@ -358,8 +331,40 @@ Return list of (id . response)"
 
 (defvar-local pr-review--notifications-pr-info-cache nil
   "Cache of PR infos for notifications.
-Key is the notification ID (string), Value is (last_updated . pr_info).
+A hashtable, key is the notification ID (string), value is (last_updated . pr_info).
 last_updated is the from the notification.")
+
+(defun pr-review--notifications-pr-info-cache-remove (id)
+  "Remove ID from `pr-review--notifications-pr-info-cache'."
+  (remhash id pr-review--notifications-pr-info-cache))
+
+(defvar pr-review--get-notifications-per-page 50)
+
+(defun pr-review--get-notifications (include-read page)
+  "Get a list of notifications.
+If INCLUDE-READ is not nil, all notifications are returned,
+PAGE is the number of pages of the notifications, start from 1."
+  (apply #'ghub-request
+         "GET" "/notifications"
+         `((all . ,(if include-read "true" "false"))
+           (per_page . ,(number-to-string pr-review--get-notifications-per-page))
+           (page . ,(number-to-string page)))
+         (pr-review--ghub-common-request-args)))
+
+(defun pr-review--mark-notification-read (id)
+  "Mark notification ID as read."
+  (apply #'ghub-request
+         "PATCH" (format "/notifications/threads/%s" id)
+         '()
+         (pr-review--ghub-common-request-args)))
+
+(defun pr-review--delete-notification (id)
+  "Delete notification ID."
+  (pr-review--notifications-pr-info-cache-remove id)  ;; otherwise its pr-info would not be refreshed
+  (apply #'ghub-request
+         "DELETE" (format "/notifications/threads/%s/subscription" id)
+         '()
+         (pr-review--ghub-common-request-args)))
 
 (defun pr-review--get-notifications-with-extra-pr-info (&rest args)
   "Like `pr-review--get-notifications' with ARGS, but with extra PR info.
