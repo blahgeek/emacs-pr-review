@@ -35,9 +35,25 @@
   "Face used for unread notification rows."
   :group 'pr-review)
 
+(defface pr-review-notification-read-face
+  '((t :weight normal))
+  "Face used for read notification rows."
+  :group 'pr-review)
+
+(defface pr-review-notification-unsubscribed-face
+  '((t :inherit font-lock-comment-face))
+  "Face used for unsubscribed notification rows."
+  :group 'pr-review)
+
+(defface pr-review-notification-tag-face
+  '((t :inherit font-lock-warning-face))
+  "Face used for tags in notification list."
+  :group 'pr-review)
+
+
 (defvar-local pr-review--notification-page 1)
-(defvar-local pr-review--notification-include-read t)
-(defvar-local pr-review--notification-include-unsubscribed nil)
+(defvar-local pr-review-notification-include-read t)
+(defvar-local pr-review-notification-include-unsubscribed t)
 
 (defvar pr-review-notification-list-mode-map
   (let ((map (make-sparse-keymap)))
@@ -61,8 +77,9 @@
     (setq pr-review--notification-mode-map-setup-for-evil-done t)
     (evil-define-key* '(normal motion) pr-review-notification-list-mode-map
       (kbd "RET") #'pr-review-notification-open
-      (kbd "C-j") #'pr-review-notification-next-page
-      (kbd "C-k") #'pr-review-notification-prev-page
+      (kbd "gj") #'pr-review-notification-next-page
+      (kbd "gk") #'pr-review-notification-prev-page
+      (kbd "gn") #'pr-review-notification-goto-page
       (kbd "u") #'pr-review-notification-remove-mark
       (kbd "r") #'pr-review-notification-mark-read
       (kbd "d") #'pr-review-notification-mark-delete
@@ -75,8 +92,6 @@
   :group 'pr-review
   (pr-review--notification-mode-map-setup-for-evil)
   (use-local-map pr-review-notification-list-mode-map)
-  (setq-local pr-review--notification-page 1
-              pr-review--notification-include-read t)
 
   (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh)
   (add-to-list 'kill-buffer-query-functions 'pr-review--notification-confirm-kill-buffer)
@@ -118,8 +133,13 @@ Confirm if there's mark entries."
          ('read "-")
          ('delete "D")
          (_ ""))))
-    (when (alist-get 'unread entry)
-      (add-face-text-property beg (point) 'pr-review-notification-unread-face))
+    (add-face-text-property
+     beg (point)
+     (if (alist-get 'unread entry)
+         'pr-review-notification-unread-face
+       'pr-review-notification-read-face))
+    (when (pr-review--notification-unsubscribed entry)
+      (add-face-text-property beg (point) 'pr-review-notification-unsubscribed-face))
     (pulse-momentary-highlight-region 0 (point))))
 
 (defun pr-review--notification-format-type (entry)
@@ -127,7 +147,14 @@ Confirm if there's mark entries."
   (let-alist entry
     (if (not (equal .subject.type "PullRequest"))
         .subject.type
-      (format "PR %s" .pr-info.state))))
+      "PullReq")))
+
+(defun pr-review--notification-unsubscribed (entry)
+  "Return the subscription state if ENTRY is unsubscribed, nil if subscribed."
+  (let-alist entry
+    (when (and .pr-info.viewerSubscription
+               (not (equal .pr-info.viewerSubscription "SUBSCRIBED")))
+      .pr-info.viewerSubscription)))
 
 (defun pr-review--notification-format-notable-activities (entry)
   "Format 'notable activities since last read' column for notification ENTRY."
@@ -146,14 +173,14 @@ Confirm if there's mark entries."
            (unless (equal my-login .author.login)
              (push .author.login commenters)))
           )))
-    (concat (let-alist entry (when (and .pr-info.viewerSubscription
-                                        (not (equal .pr-info.viewerSubscription "SUBSCRIBED")))
-                               (format "[%s] " .pr-info.viewerSubscription)))
-            (when assigned "ASSIGNED ")
-            (when mentioned "MENTIONED ")
-            (when review-requested "REVIEW-REQUESTED ")
+    (concat (let-alist entry
+              (when (not (equal .pr-info.state "OPEN"))
+                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-notification-tag-face) " ")))
+            (when assigned (propertize "+assisnged " 'face 'pr-review-notification-tag-face))
+            (when mentioned (propertize "+mentioned " 'face 'pr-review-notification-tag-face))
+            (when review-requested (propertize "+review_requested " 'face 'pr-review-notification-tag-face))
             (when commenters
-              (format "{%s}" (string-join commenters ", "))))))
+              (format "+{%s}" (string-join (delete-dups commenters) ", "))))))
 
 (defun pr-review--notification-format-time (time-str)
   "Format TIME-STR as human readable relative string."
@@ -178,26 +205,25 @@ Confirm if there's mark entries."
 
   (setq-local tabulated-list-format
               [("Updated at" 12 pr-review--notification-entry-sort-updated-at)
-               ("Type" 12 t)
+               ("Type" 8 t)
                ("Title" 85 nil)
-               ("Notable activities" 25 nil)])
+               ("Activities" 25 nil)])
   (let* ((resp-orig (pr-review--get-notifications-with-extra-pr-info
-                     pr-review--notification-include-read
+                     pr-review-notification-include-read
                      pr-review--notification-page))
          (resp resp-orig))
-    (unless pr-review--notification-include-unsubscribed
+    (unless pr-review-notification-include-unsubscribed
       ;; TODO: handle Issue
-      (setq resp (seq-filter (lambda (item) (let ((subscription (let-alist item .pr-info.viewerSubscription)))
-                                              (or (null subscription) (equal subscription "SUBSCRIBED"))))
+      (setq resp (seq-filter (lambda (item) (not (pr-review--notification-unsubscribed item)))
                              resp)))
     (setq-local header-line-format
                 (substitute-command-keys
-                 (format "Page %d, %d items, %s, %s. Go next/prev page with `\\[pr-review-notification-next-page]'/`\\[pr-review-notification-prev-page]'. Toggle unread filter with `\\[pr-review-notification-toggle-filter]'"
+                 (format "Page %d, %d items. Filter: %s %s. Go next/prev page with `\\[pr-review-notification-next-page]'/`\\[pr-review-notification-prev-page]'. Toggle filter with `\\[pr-review-notification-toggle-filter]'"
                          pr-review--notification-page
                          (length resp)
-                         (if pr-review--notification-include-read "unread&read" "unread only")
-                         (if pr-review--notification-include-unsubscribed "including unsubscribed"
-                           (format "%d unsubscribed filtered" (- (length resp-orig) (length resp)))))))
+                         (if pr-review-notification-include-read "+read" "-read")
+                         (if pr-review-notification-include-unsubscribed "+unsubscribed"
+                           (format "-unsubscribed (%d filtered)" (- (length resp-orig) (length resp)))))))
     ;; refresh marks, remove those with outdated last_updated
     (let ((current-last-updated (make-hash-table :test 'equal)))
       (dolist (entry resp)
@@ -242,23 +268,27 @@ Confirm if there's mark entries."
     (setq-local pr-review--notification-page (1- pr-review--notification-page)))
   (revert-buffer))
 
+(defun pr-review-notification-goto-page (page)
+  "Go to page PAGE of `pr-review-notification-list-mode'."
+  (interactive "nPage: ")
+  (unless (eq major-mode 'pr-review-notification-list-mode)
+    (error "Only available in pr-review-notification-list-mode"))
+  (setq-local pr-review--notification-page (max page 1))
+  (revert-buffer))
+
 (defun pr-review-notification-toggle-filter ()
   "Toggle filter of `pr-review-notification-list-mode'."
   (interactive)
   (unless (eq major-mode 'pr-review-notification-list-mode)
     (error "Only available in pr-review-notification-list-mode"))
-  (let* ((modes '(("Unread&read, subscribed only (default)" . default)
-                  ("Unread&read, subscribed&unsubscribed" . all)
-                  ("Unread only, subscribed only" . unread)))
-         (ans (completing-read "Filter mode: " modes nil t)))
-    (pcase (alist-get ans modes nil nil 'equal)
-      ('all (setq-local pr-review--notification-include-read t
-                        pr-review--notification-include-unsubscribed t))
-      ('unread (setq-local pr-review--notification-include-read nil
-                           pr-review--notification-include-unsubscribed nil))
-      (_ (setq-local pr-review--notification-include-read t
-                     pr-review--notification-include-unsubscribed nil)))
-  (revert-buffer)))
+  (let ((ans (completing-read "Filter: " '("+read +unsubscribed"
+                                           "+read -unsubscribed"
+                                           "-read -unsubscribed"
+                                           "-read +unsubscribed")
+                              nil 'require-match)))
+    (setq-local pr-review-notification-include-read (string-match-p (rx "+read") ans)
+                pr-review-notification-include-unsubscribed (string-match-p (rx "+unsubscribed") ans)))
+  (revert-buffer))
 
 (defun pr-review-notification-remove-mark ()
   "Remove any mark of the entry in current line."

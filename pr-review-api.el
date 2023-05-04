@@ -353,6 +353,7 @@ PAGE is the number of pages of the notifications, start from 1."
 
 (defun pr-review--mark-notification-read (id)
   "Mark notification ID as read."
+  (pr-review--notifications-pr-info-cache-remove id)  ;; otherwise its pr-info would not be refreshed
   (apply #'ghub-request
          "PATCH" (format "/notifications/threads/%s" id)
          '()
