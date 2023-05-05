@@ -3,6 +3,11 @@ repository(owner: "%1$s", name: "%2$s") {
     state
     viewerSubscription
     author { login }
+    assignees(last: 10) { nodes { login }}
+    reviewRequests(last: 10) { nodes { requestedReviewer {
+      ... on User { login }
+    } } }
+    participants(last: 10) { nodes { login }}
     timelineItemsSince: timelineItems(since: "%4$s", last: 50, itemTypes: [ASSIGNED_EVENT, REVIEW_REQUESTED_EVENT, MENTIONED_EVENT, ISSUE_COMMENT, PULL_REQUEST_REVIEW]) {
       nodes {
         __typename

@@ -45,9 +45,19 @@
   "Face used for unsubscribed notification rows."
   :group 'pr-review)
 
-(defface pr-review-notification-tag-face
+(defface pr-review-notification-status-face
+  '((t :inherit font-lock-keyword-face))
+  "Face used for PR status in notification list."
+  :group 'pr-review)
+
+(defface pr-review-notification-important-activity-face
   '((t :inherit font-lock-warning-face))
-  "Face used for tags in notification list."
+  "Face used for important activities in notification list."
+  :group 'pr-review)
+
+(defface pr-review-notification-unimportant-activity-face
+  '((t :weight normal :slant italic))
+  "Face used for unimportant activities in notification list."
   :group 'pr-review)
 
 
@@ -133,11 +143,9 @@ Confirm if there's mark entries."
          ('read "-")
          ('delete "D")
          (_ ""))))
-    (add-face-text-property
-     beg (point)
-     (if (alist-get 'unread entry)
-         'pr-review-notification-unread-face
-       'pr-review-notification-read-face))
+    (if (alist-get 'unread entry)
+        (add-face-text-property beg (point) 'pr-review-notification-unread-face 'append)
+      (add-face-text-property beg (point) 'pr-review-notification-read-face))  ;; for read-face, its priority is higher. do not append
     (when (pr-review--notification-unsubscribed entry)
       (add-face-text-property beg (point) 'pr-review-notification-unsubscribed-face))
     (pulse-momentary-highlight-region 0 (point))))
@@ -156,31 +164,52 @@ Confirm if there's mark entries."
                (not (equal .pr-info.viewerSubscription "SUBSCRIBED")))
       .pr-info.viewerSubscription)))
 
-(defun pr-review--notification-format-notable-activities (entry)
-  "Format 'notable activities since last read' column for notification ENTRY."
+(defun pr-review--notification-format-activities (entry)
+  "Format activities for notification ENTRY."
   (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
-        mentioned assigned review-requested commenters)
+        new-mentioned new-assigned new-review-requested new-commenters
+        assigned review-requested old-commenters)
+    (let-alist entry
+      (when (and (null .last_read_at) .pr-info.author.login)
+        (push .pr-info.author.login new-commenters))  ;; add author to commenters if no last read
+      (setq assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
+                                 .pr-info.assignees.nodes)
+            review-requested (cl-find-if (lambda (node) (equal my-login (let-alist node .requestedReviewer.login)))
+                                         .pr-info.reviewRequests.nodes)))
     (dolist (timeline-item (let-alist entry .pr-info.timelineItemsSince.nodes))
       (let-alist timeline-item
         (pcase .__typename
           ("AssignedEvent" (when (equal my-login .assignee.login)
-                             (setq assigned t)))
+                             (setq new-assigned t)))
           ("ReviewRequestedEvent" (when (equal my-login .requestedReviewer.login)
-                                    (setq review-requested t)))
+                                    (setq new-review-requested t)))
           ("MentionedEvent" (when (equal my-login .actor.login)
-                              (setq mentioned t)))
+                              (setq new-mentioned t)))
           ((or "IssueComment" "PullRequestReview")
            (unless (equal my-login .author.login)
-             (push .author.login commenters)))
+             (push .author.login new-commenters)))
           )))
+    (dolist (participant-item (let-alist entry .pr-info.participants.nodes))
+      (let ((login (let-alist participant-item .login)))
+        (unless (or (equal login my-login) (member login new-commenters))
+          (push login old-commenters))))
     (concat (let-alist entry
               (when (not (equal .pr-info.state "OPEN"))
-                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-notification-tag-face) " ")))
-            (when assigned (propertize "+assisnged " 'face 'pr-review-notification-tag-face))
-            (when mentioned (propertize "+mentioned " 'face 'pr-review-notification-tag-face))
-            (when review-requested (propertize "+review_requested " 'face 'pr-review-notification-tag-face))
-            (when commenters
-              (format "+{%s}" (string-join (delete-dups commenters) ", "))))))
+                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-notification-status-face) " ")))
+            (when new-mentioned (propertize "+mentioned " 'face 'pr-review-notification-important-activity-face))
+            (cond
+             (new-assigned (propertize "+assisnged " 'face 'pr-review-notification-important-activity-face))
+             (assigned (propertize "assisnged " 'face 'pr-review-notification-status-face)))
+            (cond
+             (new-review-requested (propertize "+review_requested " 'face 'pr-review-notification-important-activity-face))
+             (review-requested (propertize "review_requested " 'face 'pr-review-notification-status-face)))
+            (when new-commenters
+              (mapconcat (lambda (s) (format "+%s " s))
+                         (delete-dups (reverse new-commenters)) ""))
+            (when old-commenters
+              (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-notification-unimportant-activity-face))
+                         (delete-dups (reverse old-commenters)) ""))
+            )))
 
 (defun pr-review--notification-format-time (time-str)
   "Format TIME-STR as human readable relative string."
@@ -242,7 +271,7 @@ Confirm if there's mark entries."
                         (pr-review--notification-format-time .updated_at)
                         (pr-review--notification-format-type entry)
                         (format "[%s] %s" .repository.full_name .subject.title)
-                        (pr-review--notification-format-notable-activities entry)
+                        (pr-review--notification-format-activities entry)
                         ;; .reason
                         ))))
              resp))
