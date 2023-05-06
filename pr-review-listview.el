@@ -27,6 +27,37 @@
 (require 'tabulated-list)
 
 
+(defface pr-review-listview-unread-face
+  '((t :inherit bold))
+  "Face used for unread notification rows."
+  :group 'pr-review)
+
+(defface pr-review-listview-read-face
+  '((t :weight normal))
+  "Face used for read notification&search rows."
+  :group 'pr-review)
+
+(defface pr-review-listview-unsubscribed-face
+  '((t :inherit font-lock-comment-face))
+  "Face used for unsubscribed notification&search rows."
+  :group 'pr-review)
+
+(defface pr-review-listview-status-face
+  '((t :inherit font-lock-keyword-face))
+  "Face used for PR status in notification&search list."
+  :group 'pr-review)
+
+(defface pr-review-listview-important-activity-face
+  '((t :inherit font-lock-warning-face))
+  "Face used for important activities in notification&search list."
+  :group 'pr-review)
+
+(defface pr-review-listview-unimportant-activity-face
+  '((t :weight normal :slant italic))
+  "Face used for unimportant activities in notification&search list."
+  :group 'pr-review)
+
+
 (defvar pr-review-listview-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)

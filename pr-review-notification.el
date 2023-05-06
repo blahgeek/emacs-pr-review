@@ -30,37 +30,6 @@
 
 (declare-function pr-review-open "pr-review")
 
-(defface pr-review-notification-unread-face
-  '((t :inherit bold))
-  "Face used for unread notification rows."
-  :group 'pr-review)
-
-(defface pr-review-notification-read-face
-  '((t :weight normal))
-  "Face used for read notification rows."
-  :group 'pr-review)
-
-(defface pr-review-notification-unsubscribed-face
-  '((t :inherit font-lock-comment-face))
-  "Face used for unsubscribed notification rows."
-  :group 'pr-review)
-
-(defface pr-review-notification-status-face
-  '((t :inherit font-lock-keyword-face))
-  "Face used for PR status in notification list."
-  :group 'pr-review)
-
-(defface pr-review-notification-important-activity-face
-  '((t :inherit font-lock-warning-face))
-  "Face used for important activities in notification list."
-  :group 'pr-review)
-
-(defface pr-review-notification-unimportant-activity-face
-  '((t :weight normal :slant italic))
-  "Face used for unimportant activities in notification list."
-  :group 'pr-review)
-
-
 (defvar-local pr-review-notification-include-read t)
 (defvar-local pr-review-notification-include-unsubscribed t)
 
@@ -94,7 +63,7 @@
   (pr-review--notification-mode-map-setup-for-evil)
   (use-local-map pr-review-notification-mode-map)
 
-  (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh)
+  (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh nil 'local)
   (add-to-list 'kill-buffer-query-functions 'pr-review--notification-confirm-kill-buffer)
 
   (setq-local pr-review--listview-open-callback #'pr-review--notification-open
@@ -136,10 +105,10 @@ Confirm if there's mark entries."
          ('delete "D")
          (_ ""))))
     (if (alist-get 'unread entry)
-        (add-face-text-property beg (point) 'pr-review-notification-unread-face 'append)
-      (add-face-text-property beg (point) 'pr-review-notification-read-face))  ;; for read-face, its priority is higher. do not append
+        (add-face-text-property beg (point) 'pr-review-listview-unread-face 'append)
+      (add-face-text-property beg (point) 'pr-review-listview-read-face))  ;; for read-face, its priority is higher. do not append
     (when (pr-review--notification-unsubscribed entry)
-      (add-face-text-property beg (point) 'pr-review-notification-unsubscribed-face))
+      (add-face-text-property beg (point) 'pr-review-listview-unsubscribed-face))
     (pulse-momentary-highlight-region 0 (point))))
 
 (defun pr-review--notification-format-type (entry)
@@ -187,19 +156,19 @@ Confirm if there's mark entries."
           (push login old-commenters))))
     (concat (let-alist entry
               (when (not (equal .pr-info.state "OPEN"))
-                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-notification-status-face) " ")))
-            (when new-mentioned (propertize "+mentioned " 'face 'pr-review-notification-important-activity-face))
+                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
+            (when new-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
             (cond
-             (new-assigned (propertize "+assisnged " 'face 'pr-review-notification-important-activity-face))
-             (assigned (propertize "assisnged " 'face 'pr-review-notification-status-face)))
+             (new-assigned (propertize "+assisnged " 'face 'pr-review-listview-important-activity-face))
+             (assigned (propertize "assisnged " 'face 'pr-review-listview-status-face)))
             (cond
-             (new-review-requested (propertize "+review_requested " 'face 'pr-review-notification-important-activity-face))
-             (review-requested (propertize "review_requested " 'face 'pr-review-notification-status-face)))
+             (new-review-requested (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
+             (review-requested (propertize "review_requested " 'face 'pr-review-listview-status-face)))
             (when new-commenters
               (mapconcat (lambda (s) (format "+%s " s))
                          (delete-dups (reverse new-commenters)) ""))
             (when old-commenters
-              (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-notification-unimportant-activity-face))
+              (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-listview-unimportant-activity-face))
                          (delete-dups (reverse old-commenters)) ""))
             )))
 
@@ -223,7 +192,7 @@ Confirm if there's mark entries."
                              resp)))
     (setq-local header-line-format
                 (substitute-command-keys
-                 (format "Page %d, %d items. Filter: %s %s. Go next/prev page with `\\[pr-review-notification-next-page]'/`\\[pr-review-notification-prev-page]'. Toggle filter with `\\[pr-review-notification-toggle-filter]'"
+                 (format "Page %d, %d items. Filter: %s %s. Go next/prev page with `\\[pr-review-listview-next-page]'/`\\[pr-review-listview-prev-page]'. Toggle filter with `\\[pr-review-notification-toggle-filter]'"
                          pr-review--listview-page
                          (length resp)
                          (if pr-review-notification-include-read "+read" "-read")
@@ -329,6 +298,16 @@ Confirm if there's mark entries."
                           nil  ;; new window
                           anchor))
       (browse-url .subject.url))))
+
+;;;###autoload
+(defun pr-review-notification ()
+  "Show github notifications in a new buffer."
+  (interactive)
+  (with-current-buffer (get-buffer-create "*pr-review notifications*")
+    (pr-review-notification-mode)
+    (pr-review--notification-refresh)
+    (tabulated-list-print)
+    (switch-to-buffer (current-buffer))))
 
 (provide 'pr-review-notification)
 ;;; pr-review-notification.el ends here

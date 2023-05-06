@@ -32,7 +32,6 @@
 (require 'pr-review-input)
 (require 'pr-review-render)
 (require 'pr-review-action)
-(require 'pr-review-notification)
 (require 'tabulated-list)
 
 (defun pr-review--confirm-kill-buffer ()
@@ -283,16 +282,6 @@ When called interactively, you will be asked to enter the QUERY."
                                        nil 'require-match)))
     (when-let ((selected-url (alist-get selected-pr prs-alist nil nil 'equal)))
       (pr-review-open-url selected-url))))
-
-;;;###autoload
-(defun pr-review-notification ()
-  "Show github notifications in a new buffer."
-  (interactive)
-  (with-current-buffer (get-buffer-create "*pr-review notifications*")
-    (pr-review-notification-mode)
-    (pr-review--notification-refresh)
-    (tabulated-list-print)
-    (switch-to-buffer (current-buffer))))
 
 
 (provide 'pr-review)
