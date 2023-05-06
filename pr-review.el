@@ -289,7 +289,7 @@ When called interactively, you will be asked to enter the QUERY."
   "Show github notifications in a new buffer."
   (interactive)
   (with-current-buffer (get-buffer-create "*pr-review notifications*")
-    (pr-review-notification-list-mode)
+    (pr-review-notification-mode)
     (pr-review--notification-refresh)
     (tabulated-list-print)
     (switch-to-buffer (current-buffer))))

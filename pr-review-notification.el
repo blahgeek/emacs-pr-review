@@ -25,7 +25,7 @@
 ;;; Code:
 
 (require 'pr-review-api)
-(require 'tabulated-list)
+(require 'pr-review-listview)
 (require 'cl-seq)
 
 (declare-function pr-review-open "pr-review")
@@ -61,21 +61,17 @@
   :group 'pr-review)
 
 
-(defvar-local pr-review--notification-page 1)
 (defvar-local pr-review-notification-include-read t)
 (defvar-local pr-review-notification-include-unsubscribed t)
 
 (defvar pr-review-notification-mode-map
   (let ((map (make-sparse-keymap)))
-    (set-keymap-parent map tabulated-list-mode-map)
-    (define-key map (kbd "C-c C-n") #'pr-review-notification-next-page)
-    (define-key map (kbd "C-c C-p") #'pr-review-notification-prev-page)
+    (set-keymap-parent map pr-review-listview-mode-map)
     (define-key map (kbd "C-c C-t") #'pr-review-notification-toggle-filter)
     (define-key map (kbd "C-c C-u") #'pr-review-notification-remove-mark)
     (define-key map (kbd "C-c C-s") #'pr-review-notification-execute-mark)
     (define-key map (kbd "C-c C-r") #'pr-review-notification-mark-read)
     (define-key map (kbd "C-c C-d") #'pr-review-notification-mark-delete)
-    (define-key map (kbd "RET") #'pr-review-notification-open)
     map))
 
 (defvar pr-review--notification-mode-map-setup-for-evil-done nil)
@@ -86,18 +82,13 @@
              (not pr-review--notification-mode-map-setup-for-evil-done))
     (setq pr-review--notification-mode-map-setup-for-evil-done t)
     (evil-define-key* '(normal motion) pr-review-notification-mode-map
-      (kbd "RET") #'pr-review-notification-open
-      (kbd "gj") #'pr-review-notification-next-page
-      (kbd "gk") #'pr-review-notification-prev-page
-      (kbd "gn") #'pr-review-notification-goto-page
       (kbd "u") #'pr-review-notification-remove-mark
       (kbd "r") #'pr-review-notification-mark-read
       (kbd "d") #'pr-review-notification-mark-delete
-      (kbd "x") #'pr-review-notification-execute-mark
-      (kbd "q") #'kill-current-buffer)))
+      (kbd "x") #'pr-review-notification-execute-mark)))
 
-(define-derived-mode pr-review-notification-mode tabulated-list-mode
-  "GithubNotifications"
+(define-derived-mode pr-review-notification-mode pr-review-listview-mode
+  "PrReviewNotification"
   :interactive nil
   :group 'pr-review
   (pr-review--notification-mode-map-setup-for-evil)
@@ -106,7 +97,8 @@
   (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh)
   (add-to-list 'kill-buffer-query-functions 'pr-review--notification-confirm-kill-buffer)
 
-  (setq-local tabulated-list-printer #'pr-review--notification-print-entry
+  (setq-local pr-review--listview-open-callback #'pr-review--notification-open
+              tabulated-list-printer #'pr-review--notification-print-entry
               tabulated-list-use-header-line nil
               tabulated-list-padding 2))
 
@@ -211,22 +203,6 @@ Confirm if there's mark entries."
                          (delete-dups (reverse old-commenters)) ""))
             )))
 
-(defun pr-review--notification-format-time (time-str)
-  "Format TIME-STR as human readable relative string."
-  (let* ((time (date-to-time time-str))
-         (delta (float-time (time-subtract (current-time) time))))
-    (cond
-     ((< delta 3600)
-      (format "%.0f min. ago" (/ delta 60)))
-     ((equal (time-to-days time) (time-to-days (current-time)))
-      (format-time-string "Today %H:%M" time))
-     ((< delta (* 5 24 3600))
-      (format-time-string "%a. %H:%M" time))
-     ((< delta (* 365 24 3600))
-      (format-time-string "%b %d" time))
-     (t
-      (format-time-string "%b %d, %Y" time)))))
-
 (defun pr-review--notification-refresh ()
   "Refresh notification buffer."
   (unless (eq major-mode 'pr-review-notification-mode)
@@ -239,7 +215,7 @@ Confirm if there's mark entries."
                ("Activities" 25 nil)])
   (let* ((resp-orig (pr-review--get-notifications-with-extra-pr-info
                      pr-review-notification-include-read
-                     pr-review--notification-page))
+                     pr-review--listview-page))
          (resp resp-orig))
     (unless pr-review-notification-include-unsubscribed
       ;; TODO: handle Issue
@@ -248,7 +224,7 @@ Confirm if there's mark entries."
     (setq-local header-line-format
                 (substitute-command-keys
                  (format "Page %d, %d items. Filter: %s %s. Go next/prev page with `\\[pr-review-notification-next-page]'/`\\[pr-review-notification-prev-page]'. Toggle filter with `\\[pr-review-notification-toggle-filter]'"
-                         pr-review--notification-page
+                         pr-review--listview-page
                          (length resp)
                          (if pr-review-notification-include-read "+read" "-read")
                          (if pr-review-notification-include-unsubscribed "+unsubscribed"
@@ -268,7 +244,7 @@ Confirm if there's mark entries."
                (let-alist entry
                  (list entry
                        (vector
-                        (pr-review--notification-format-time .updated_at)
+                        (pr-review--listview-format-time .updated_at)
                         (pr-review--notification-format-type entry)
                         (format "[%s] %s" .repository.full_name .subject.title)
                         (pr-review--notification-format-activities entry)
@@ -279,31 +255,6 @@ Confirm if there's mark entries."
     (message (concat (format "Notifications refreshed, %d items." (length resp))
                      (when (> (length resp-orig) (length resp))
                        (format " (filtered %d unsubscribed items)" (- (length resp-orig) (length resp))))))))
-
-(defun pr-review-notification-next-page ()
-  "Go to next page of `pr-review-notification-mode'."
-  (interactive)
-  (unless (eq major-mode 'pr-review-notification-mode)
-    (error "Only available in pr-review-notification-mode"))
-  (setq-local pr-review--notification-page (1+ pr-review--notification-page))
-  (revert-buffer))
-
-(defun pr-review-notification-prev-page ()
-  "Go to previous page of `pr-review-notification-mode'."
-  (interactive)
-  (unless (eq major-mode 'pr-review-notification-mode)
-    (error "Only available in pr-review-notification-mode"))
-  (when (> pr-review--notification-page 1)
-    (setq-local pr-review--notification-page (1- pr-review--notification-page)))
-  (revert-buffer))
-
-(defun pr-review-notification-goto-page (page)
-  "Go to page PAGE of `pr-review-notification-mode'."
-  (interactive "nPage: ")
-  (unless (eq major-mode 'pr-review-notification-mode)
-    (error "Only available in pr-review-notification-mode"))
-  (setq-local pr-review--notification-page (max page 1))
-  (revert-buffer))
 
 (defun pr-review-notification-toggle-filter ()
   "Toggle filter of `pr-review-notification-mode'."
@@ -361,25 +312,23 @@ Confirm if there's mark entries."
   (setq-local pr-review--notification-marks nil)
   (revert-buffer))
 
-(defun pr-review-notification-open ()
-  "Open notification at current cursor."
-  (interactive)
-  (when-let ((entry (get-text-property (point) 'tabulated-list-id)))
-    (let-alist entry
-      (when (and .unread
-                 (not (pr-review--notification-mark entry)))  ;; do not alter mark
-        (push (list .id 'read .updated_at) pr-review--notification-marks)
-        (tabulated-list-put-tag "-"))
-      (if (equal .subject.type "PullRequest")
-          (let ((pr-id (when (string-match (rx (group (+ (any digit))) eos) .subject.url)
-                         (match-string 1 .subject.url)))
-                (anchor (when (string-match (rx (group (+ (any digit))) eos) (or .subject.latest_comment_url ""))
-                          (match-string 1 .subject.latest_comment_url))))
-            (pr-review-open .repository.owner.login .repository.name
-                            (string-to-number pr-id)
-                            nil  ;; new window
-                            anchor))
-        (browse-url .subject.url)))))
+(defun pr-review--notification-open (entry)
+  "Open notification ENTRY."
+  (let-alist entry
+    (when (and .unread
+               (not (pr-review--notification-mark entry)))  ;; do not alter mark
+      (push (list .id 'read .updated_at) pr-review--notification-marks)
+      (tabulated-list-put-tag "-"))
+    (if (equal .subject.type "PullRequest")
+        (let ((pr-id (when (string-match (rx (group (+ (any digit))) eos) .subject.url)
+                       (match-string 1 .subject.url)))
+              (anchor (when (string-match (rx (group (+ (any digit))) eos) (or .subject.latest_comment_url ""))
+                        (match-string 1 .subject.latest_comment_url))))
+          (pr-review-open .repository.owner.login .repository.name
+                          (string-to-number pr-id)
+                          nil  ;; new window
+                          anchor))
+      (browse-url .subject.url))))
 
 (provide 'pr-review-notification)
 ;;; pr-review-notification.el ends here
