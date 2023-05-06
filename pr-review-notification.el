@@ -65,7 +65,7 @@
 (defvar-local pr-review-notification-include-read t)
 (defvar-local pr-review-notification-include-unsubscribed t)
 
-(defvar pr-review-notification-list-mode-map
+(defvar pr-review-notification-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map tabulated-list-mode-map)
     (define-key map (kbd "C-c C-n") #'pr-review-notification-next-page)
@@ -81,11 +81,11 @@
 (defvar pr-review--notification-mode-map-setup-for-evil-done nil)
 
 (defun pr-review--notification-mode-map-setup-for-evil ()
-  "Setup map in `pr-review-notification-list-mode' for evil mode (if loaded)."
+  "Setup map in `pr-review-notification-mode' for evil mode (if loaded)."
   (when (and (fboundp 'evil-define-key*)
              (not pr-review--notification-mode-map-setup-for-evil-done))
     (setq pr-review--notification-mode-map-setup-for-evil-done t)
-    (evil-define-key* '(normal motion) pr-review-notification-list-mode-map
+    (evil-define-key* '(normal motion) pr-review-notification-mode-map
       (kbd "RET") #'pr-review-notification-open
       (kbd "gj") #'pr-review-notification-next-page
       (kbd "gk") #'pr-review-notification-prev-page
@@ -96,12 +96,12 @@
       (kbd "x") #'pr-review-notification-execute-mark
       (kbd "q") #'kill-current-buffer)))
 
-(define-derived-mode pr-review-notification-list-mode tabulated-list-mode
+(define-derived-mode pr-review-notification-mode tabulated-list-mode
   "GithubNotifications"
   :interactive nil
   :group 'pr-review
   (pr-review--notification-mode-map-setup-for-evil)
-  (use-local-map pr-review-notification-list-mode-map)
+  (use-local-map pr-review-notification-mode-map)
 
   (add-hook 'tabulated-list-revert-hook #'pr-review--notification-refresh)
   (add-to-list 'kill-buffer-query-functions 'pr-review--notification-confirm-kill-buffer)
@@ -229,8 +229,8 @@ Confirm if there's mark entries."
 
 (defun pr-review--notification-refresh ()
   "Refresh notification buffer."
-  (unless (eq major-mode 'pr-review-notification-list-mode)
-    (error "Only available in pr-review-notification-list-mode"))
+  (unless (eq major-mode 'pr-review-notification-mode)
+    (error "Only available in pr-review-notification-mode"))
 
   (setq-local tabulated-list-format
               [("Updated at" 12 pr-review--notification-entry-sort-updated-at)
@@ -281,35 +281,35 @@ Confirm if there's mark entries."
                        (format " (filtered %d unsubscribed items)" (- (length resp-orig) (length resp))))))))
 
 (defun pr-review-notification-next-page ()
-  "Go to next page of `pr-review-notification-list-mode'."
+  "Go to next page of `pr-review-notification-mode'."
   (interactive)
-  (unless (eq major-mode 'pr-review-notification-list-mode)
-    (error "Only available in pr-review-notification-list-mode"))
+  (unless (eq major-mode 'pr-review-notification-mode)
+    (error "Only available in pr-review-notification-mode"))
   (setq-local pr-review--notification-page (1+ pr-review--notification-page))
   (revert-buffer))
 
 (defun pr-review-notification-prev-page ()
-  "Go to previous page of `pr-review-notification-list-mode'."
+  "Go to previous page of `pr-review-notification-mode'."
   (interactive)
-  (unless (eq major-mode 'pr-review-notification-list-mode)
-    (error "Only available in pr-review-notification-list-mode"))
+  (unless (eq major-mode 'pr-review-notification-mode)
+    (error "Only available in pr-review-notification-mode"))
   (when (> pr-review--notification-page 1)
     (setq-local pr-review--notification-page (1- pr-review--notification-page)))
   (revert-buffer))
 
 (defun pr-review-notification-goto-page (page)
-  "Go to page PAGE of `pr-review-notification-list-mode'."
+  "Go to page PAGE of `pr-review-notification-mode'."
   (interactive "nPage: ")
-  (unless (eq major-mode 'pr-review-notification-list-mode)
-    (error "Only available in pr-review-notification-list-mode"))
+  (unless (eq major-mode 'pr-review-notification-mode)
+    (error "Only available in pr-review-notification-mode"))
   (setq-local pr-review--notification-page (max page 1))
   (revert-buffer))
 
 (defun pr-review-notification-toggle-filter ()
-  "Toggle filter of `pr-review-notification-list-mode'."
+  "Toggle filter of `pr-review-notification-mode'."
   (interactive)
-  (unless (eq major-mode 'pr-review-notification-list-mode)
-    (error "Only available in pr-review-notification-list-mode"))
+  (unless (eq major-mode 'pr-review-notification-mode)
+    (error "Only available in pr-review-notification-mode"))
   (let ((ans (completing-read "Filter: " '("+read +unsubscribed"
                                            "+read -unsubscribed"
                                            "-read -unsubscribed"
