@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'tabulated-list)
+(require 'pr-review-common)
 
 
 (defface pr-review-listview-unread-face

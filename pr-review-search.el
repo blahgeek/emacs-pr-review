@@ -24,6 +24,7 @@
 
 ;;; Code:
 
+(require 'pr-review-common)
 (require 'pr-review-listview)
 (require 'pr-review-api)
 
@@ -102,18 +103,64 @@
     (tabulated-list-init-header)
     (message (format "Search result refreshed, %d items." (length items)))))
 
+(defcustom pr-review-search-predefined-queries
+  '(("is:pr archived:false author:@me is:open" . "Created")
+    ("is:pr archived:false assignee:@me is:open" . "Assigned")
+    ("is:pr archived:false mentions:@me is:open" . "Mentioned")
+    ("is:pr archived:false review-requested:@me is:open" . "Review requests"))
+  "Predefined queries for `pr-review-search'.  List of (query . name)."
+  :type '(alist :key-type string :value-type string)
+  :group 'pr-review)
+
+(defcustom pr-review-search-default-query nil
+  "Default query for `pr-review-search-open'."
+  :type 'string
+  :group 'pr-review)
+
+
+(defun pr-review--search-read-query ()
+  "Read query for search."
+  (let ((completion-extra-properties
+         (list :annotation-function
+               (lambda (q) (concat " " (alist-get q pr-review-search-predefined-queries nil nil 'equal))))))
+    (completing-read "Search GitHub> "
+                     pr-review-search-predefined-queries
+                     nil
+                     nil  ;; no require-match
+                     pr-review-search-default-query)))
+
 ;;;###autoload
 (defun pr-review-search (query)
   "Search PRs using a custom QUERY and list result in buffer.
 See github docs for syntax of QUERY.
 When called interactively, you will be asked to enter the QUERY."
-  (interactive (list (read-string "Search GitHub> " "type:pr sort:updated author:@me state:open")))
+  (interactive (list (pr-review--search-read-query)))
   (with-current-buffer (get-buffer-create "*pr-review search*")
     (pr-review-search-mode)
     (setq-local pr-review--search-query query)
     (pr-review--search-refresh)
     (tabulated-list-print)
     (switch-to-buffer (current-buffer))))
+
+;;;###autoload
+(defun pr-review-search-open (query)
+  "Search PRs using a custom QUERY and open one of them.
+See github docs for syntax of QUERY.
+When called interactively, you will be asked to enter the QUERY."
+  (interactive (list (pr-review--search-read-query)))
+  (let* ((prs (pr-review--search-prs query))
+         (prs-alist
+          (mapcar
+           (lambda (pr)
+             (let-alist pr
+               (cons (format "%s/%s: [%s] %s" .repository.nameWithOwner .number .state .title)
+                     (list .repository.owner.login .repository.name .number))))
+           prs))
+         (selected-pr (completing-read "Select:" prs-alist nil 'require-match)))
+    (when-let ((selected-value (alist-get selected-pr prs-alist nil nil 'equal)))
+      (apply #'pr-review-open selected-value))))
+
+
 
 (provide 'pr-review-search)
 ;;; pr-review-search.el ends here
