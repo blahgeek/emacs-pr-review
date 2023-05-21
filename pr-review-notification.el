@@ -192,7 +192,7 @@ Confirm if there's mark entries."
                              resp)))
     (setq-local header-line-format
                 (substitute-command-keys
-                 (format "Page %d, %d items. Filter: %s %s. Go next/prev page with `\\[pr-review-listview-next-page]'/`\\[pr-review-listview-prev-page]'. Toggle filter with `\\[pr-review-notification-toggle-filter]'"
+                 (format "Page %d, %d items. Filter: %s %s"
                          pr-review--listview-page
                          (length resp)
                          (if pr-review-notification-include-read "+read" "-read")
