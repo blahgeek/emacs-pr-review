@@ -5,7 +5,7 @@ Review Github Pull Request from Emacs!
 ![](images/overview.png)
 
 
-## How-to
+## Prepare
 
 ### Install
 
@@ -25,24 +25,32 @@ machine api.github.com login <YOUR_USERNAME>^emacs-pr-review password <YOUR_GITH
 You may customize username and api host (for github enterprise instances) using [ghub](https://magit.vc/manual/ghub/Github-Configuration-Variables.html#Github-Configuration-Variables),
 or you can also set `pr-review-ghub-username` and `pr-review-ghub-host` for pr-review only.
 
-### Open a PR
+## Usage
 
-There's two entrypoint to open a PR:
+This package provides the following entrypoint:
+
 - `M-x pr-review`: open a PR with given URL.
+- `M-x pr-review-notification`: list github notifications in a buffer, and open PRs from it
 - `M-x pr-review-search-open`: search in github and select a PR from search result.
+- `M-x pr-review-search`: like above, but list results in a buffer
 
 Suggested config (especially for evil users):
 
 ```elisp
 (evil-ex-define-cmd "prr" #'pr-review)
-(evil-ex-define-cmd "prs" #'pr-review-search-open)
+(evil-ex-define-cmd "prs" #'pr-review-search)
+(evil-ex-define-cmd "prn" #'pr-review-notification)
 (add-to-list 'browse-url-default-handlers
              '(pr-review-url-parse . pr-review-open-url))
 ```
 
-Note that `pr-review` will use the URL in current context as the default input.
-My personal recommended workflow would be using [notmuch](https://notmuchmail.org/notmuch-emacs/) to
+Personally I suggest two possible workflows:
+
+1. Use `pr-review-notification` as your "dashboard" and enter PR review from it.
+2. Use [notmuch](https://notmuchmail.org/notmuch-emacs/) (or some other email client in emacs) to
 receive and read all github notification emails and start `pr-review` from the notmuch message buffer.
+Running `pr-review` in the email buffer will automatically find the PR url in the email.
+
 
 ### Keybindings in PrReview buffer
 
@@ -81,3 +89,17 @@ Keybindings in this buffer:
 - `C-c C-c`: Finish editing, confirm the content
 - `C-c C-k`: Abort, drop the content
 - `C-c @`: Mention some other (inserting `@username`)
+
+### Keybindings in PrReviewNotification buffer
+
+- `RET`: Open the PR (While this buffer lists all types of notifications, only Pull Requests can be opened by this package)
+- `C-c C-n` / `C-c C-p` (`gj` / `gk` for evil users): next/prev page
+- Refresh with `revert-buffer` (`gr` for evil users)
+- `C-c C-t`: toggle filters
+
+Actions in this buffer works like `dired`: items are first marked, then executed:
+
+- `C-c C-r` (`r` for evil users): mark as read. Note that items are automatically marked as read when opened.
+- `C-c C-d` (`d` for evil users): mark as unsubscribe (delete).
+- `C-c C-s` (`x` for evil users): execute marks
+- `C-c C-u` (`u` for evil users): unmark item

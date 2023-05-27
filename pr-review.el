@@ -32,7 +32,6 @@
 (require 'pr-review-input)
 (require 'pr-review-render)
 (require 'pr-review-action)
-(require 'pr-review-notification)
 (require 'tabulated-list)
 
 (defun pr-review--confirm-kill-buffer ()
@@ -259,40 +258,6 @@ and new window will be used when called with prefix."
 This function is the same as `pr-review',
 but it can be used in `browse-url-handlers' with `pr-review-url-parse'."
   (pr-review url new-window))
-
-(defcustom pr-review-search-default-query "type:pr sort:updated author:@me state:open"
-  "Default query for `pr-review-search-open'."
-  :type 'string
-  :group 'pr-review)
-
-;;;###autoload
-(defun pr-review-search-open (query)
-  "Search PRs using a custom QUERY and open one of them.
-See github docs for syntax of QUERY.
-When called interactively, you will be asked to enter the QUERY."
-  (interactive (list (read-string "Search GitHub> " pr-review-search-default-query)))
-  (let* ((prs (pr-review--search-prs query))
-         (prs-alist (mapcar (lambda (pr)
-                              (let-alist pr
-                                (cons (format "%s/%s: [%s] %s"
-                                              .repository.nameWithOwner .number .state .title)
-                                      .url)))
-                            prs))
-         (selected-pr (completing-read "Select:"
-                                       (mapcar #'car prs-alist)
-                                       nil 'require-match)))
-    (when-let ((selected-url (alist-get selected-pr prs-alist nil nil 'equal)))
-      (pr-review-open-url selected-url))))
-
-;;;###autoload
-(defun pr-review-notification ()
-  "Show github notifications in a new buffer."
-  (interactive)
-  (with-current-buffer (get-buffer-create "*pr-review notifications*")
-    (pr-review-notification-list-mode)
-    (pr-review--notification-refresh)
-    (tabulated-list-print)
-    (switch-to-buffer (current-buffer))))
 
 
 (provide 'pr-review)

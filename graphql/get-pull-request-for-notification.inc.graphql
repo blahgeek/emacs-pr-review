@@ -1,0 +1,22 @@
+repository(owner: "%1$s", name: "%2$s") {
+  pullRequest(number: %3$d) {
+    state
+    viewerSubscription
+    author { login }
+    assignees(last: 10) { nodes { login }}
+    reviewRequests(last: 10) { nodes { requestedReviewer {
+      ... on User { login }
+    } } }
+    participants(last: 10) { nodes { login }}
+    timelineItemsSince: timelineItems(since: "%4$s", last: 50, itemTypes: [ASSIGNED_EVENT, REVIEW_REQUESTED_EVENT, MENTIONED_EVENT, ISSUE_COMMENT, PULL_REQUEST_REVIEW]) {
+      nodes {
+        __typename
+        ... on AssignedEvent { assignee { ... on User { login } } }
+        ... on ReviewRequestedEvent { requestedReviewer { ... on User { login } } }
+        ... on MentionedEvent { actor { login } }
+        ... on IssueComment { author { login } }
+        ... on PullRequestReview { author { login } }
+      }
+    }
+  }
+}

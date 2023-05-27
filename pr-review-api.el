@@ -59,18 +59,23 @@
         :username pr-review-ghub-username
         :host pr-review-ghub-host))
 
-(defun pr-review--execute-graphql (name variables)
-  "Execute graphql from file NAME.graphql with VARIABLES, return result."
+(defun pr-review--execute-graphql-raw (query variables)
+  "Execute graphql QUERY with VARIABLES, return result."
   (let ((res (apply #'ghub-graphql
-                    (pr-review--get-graphql name) variables
+                    query variables
                     (pr-review--ghub-common-request-args))))
     (let-alist res
       (when .errors
+        (message "%s" query)
         (message "%s" res)
         (let-alist (car .errors)
-          (error "Error while making graphql request %s: %s: %s"
-                 name .type .message)))
+          (error "Error while making graphql request: %s: %s"
+                 .type .message)))
       .data)))
+
+(defun pr-review--execute-graphql (name variables)
+  "Execute graphql from file NAME.graphql with VARIABLES, return result."
+  (pr-review--execute-graphql-raw (pr-review--get-graphql name) variables))
 
 (defun pr-review--fetch-pr-info ()
   "Fetch pr info based on current buffer's local variable."
@@ -293,6 +298,46 @@ See `pr-review--get-assignable-users-1' for return format."
    `((input . ((state . ,state)
                (subscribableId . ,pr-node-id))))))
 
+
+(defvar pr-review--whoami-cache nil "Cache for `pr-review--whoami'.")
+
+(defun pr-review--whoami ()
+  "Return current user info."
+  (pr-review--execute-graphql 'whoami nil))
+
+(defun pr-review--whoami-cached ()
+  "Return current user info, cached."
+  (or pr-review--whoami-cache
+      (setq pr-review--whoami-cache (pr-review--whoami))))
+
+(defun pr-review--batch-get-pr-info-for-notifications (prs)
+  "Batch get PR info for notifications.
+PRS should be a list of (id repo-owner repo-name pr-number unread-since).
+unread-since is a ISO-8601 encoded UTC date string.
+Return list of (id . response)"
+  (message "Batching getting PR info for %d notifications..." (length prs))
+  (let* ((single-query-template (pr-review--get-graphql 'get-pull-request-for-notification.inc))
+         (query (concat "query {"
+                        (mapconcat (lambda (pr)
+                                     (concat
+                                      (format "n%s: " (car pr))
+                                      (apply #'format single-query-template (cdr pr))))
+                                   prs "\n")
+                        "}"))
+         (raw-resp (pr-review--execute-graphql-raw query nil)))
+    (mapcar (lambda (item) (cons (substring (symbol-name (car item)) 1)
+                                 (cdadr item)))
+            raw-resp)))
+
+(defvar-local pr-review--notifications-pr-info-cache nil
+  "Cache of PR infos for notifications.
+A hashtable, key is the notification ID (string), value is (last_updated . pr_info).
+last_updated is the from the notification.")
+
+(defun pr-review--notifications-pr-info-cache-remove (id)
+  "Remove ID from `pr-review--notifications-pr-info-cache'."
+  (remhash id pr-review--notifications-pr-info-cache))
+
 (defvar pr-review--get-notifications-per-page 50)
 
 (defun pr-review--get-notifications (include-read page)
@@ -308,10 +353,61 @@ PAGE is the number of pages of the notifications, start from 1."
 
 (defun pr-review--mark-notification-read (id)
   "Mark notification ID as read."
+  (pr-review--notifications-pr-info-cache-remove id)  ;; otherwise its pr-info would not be refreshed
   (apply #'ghub-request
          "PATCH" (format "/notifications/threads/%s" id)
          '()
          (pr-review--ghub-common-request-args)))
+
+(defun pr-review--delete-notification (id)
+  "Delete notification ID."
+  (pr-review--notifications-pr-info-cache-remove id)  ;; otherwise its pr-info would not be refreshed
+  (apply #'ghub-request
+         "DELETE" (format "/notifications/threads/%s/subscription" id)
+         '()
+         (pr-review--ghub-common-request-args)))
+
+(defun pr-review--get-notifications-with-extra-pr-info (&rest args)
+  "Like `pr-review--get-notifications' with ARGS, but with extra PR info.
+The PR info would be cached if possible."
+  (unless pr-review--notifications-pr-info-cache
+    (setq-local pr-review--notifications-pr-info-cache (make-hash-table :test 'equal)))
+  (let* ((notifications (apply #'pr-review--get-notifications args))
+         ;; only query those not in cache, or "updated_at" is updated
+         (items-needs-query (seq-filter
+                             (lambda (item)
+                               (let-alist item
+                                 (and
+                                  (equal .subject.type "PullRequest")
+                                  (not (equal .updated_at
+                                              (car (gethash .id pr-review--notifications-pr-info-cache)))))))
+                             notifications))
+         (id-to-last-updated (make-hash-table :test 'equal))
+         batch-query-result)
+    (when items-needs-query
+      (setq batch-query-result
+            (pr-review--batch-get-pr-info-for-notifications
+             (mapcar (lambda (item)
+                       (let-alist item
+                         (list .id .repository.owner.login .repository.name
+                               (if (string-match (rx (group (+ (any digit))) eos) .subject.url)
+                                   (string-to-number (match-string 1 .subject.url))
+                                 (error "Invalid PR url %s" .subject.url))
+                               (or .last_read_at "1970-01-01T00:00:00Z"))))
+                     items-needs-query)))
+      (dolist (item items-needs-query)
+        (puthash (alist-get 'id item) (alist-get 'updated_at item) id-to-last-updated))
+      (dolist (query-result batch-query-result)
+        (puthash (car query-result)
+                 (cons (gethash (car query-result) id-to-last-updated)
+                       (cdr query-result))
+                 pr-review--notifications-pr-info-cache)))
+    ;; add 'pr-info to each item
+    (mapcar (lambda (item)
+              (cons (cons 'pr-info (cdr (gethash (alist-get 'id item) pr-review--notifications-pr-info-cache)))
+                    item))
+            notifications)))
+
 
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here
