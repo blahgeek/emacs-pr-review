@@ -155,7 +155,7 @@ Confirm if there's mark entries."
         (unless (or (equal login my-login) (member login new-commenters))
           (push login old-commenters))))
     (concat (let-alist entry
-              (when (not (equal .pr-info.state "OPEN"))
+              (when (and .pr-info.state (not (equal .pr-info.state "OPEN")))
                 (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
             (when new-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
             (cond
