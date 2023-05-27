@@ -58,6 +58,18 @@
 
 (define-derived-mode pr-review-notification-mode pr-review-listview-mode
   "PrReviewNotification"
+  "Major mode for list of github notifications.
+
+- Open item: `pr-review-listview-open'
+  (While this buffer lists all types of notifications, only Pull Requests can be opened by this package).
+- Page navigation: `pr-review-listview-next-page', `pr-review-listview-prev-page', `pr-review-listview-goto-page'
+- Mark items as \"read\" or \"unsubscribed\" with `pr-review-notification-mark-read', `pr-review-notification-mark-delete',
+  then use `pr-review-notification-execute-mark' to execute the marks.
+  Remove existing mark with `pr-review-notification-remove-mark'.
+- Toggle filter with `pr-review-notification-toggle-filter'.
+- Refresh with `revert-buffer'
+
+\\{pr-review-notification-mode-map}"
   :interactive nil
   :group 'pr-review
   (pr-review--notification-mode-map-setup-for-evil)
