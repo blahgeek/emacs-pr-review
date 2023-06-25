@@ -49,16 +49,18 @@
 
 (defun pr-review--propertize-keyword (str)
   "Propertize keyword STR with optional face."
-  (propertize str 'face
-              (cond
-               ((member str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
-                'pr-review-success-state-face)
-               ((member str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING" "UNKNOWN"))
-                'pr-review-error-state-face)
-               ((member str '("RESOLVED" "OUTDATED"))
-                'pr-review-info-state-face)
-               (t
-                'pr-review-state-face))))
+  (let* ((trim-pattern "[][ \t\n\r]+")
+         (trimmed-str (string-trim str trim-pattern trim-pattern)))
+    (propertize str 'face
+                (cond
+                 ((member trimmed-str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
+                  'pr-review-success-state-face)
+                 ((member trimmed-str '("FAILURE" "TIMED_OUT" "ERROR" "CHANGES_REQUESTED" "CLOSED" "CONFLICTING" "UNKNOWN"))
+                  'pr-review-error-state-face)
+                 ((member trimmed-str '("RESOLVED" "OUTDATED" "WARNING"))
+                  'pr-review-info-state-face)
+                 (t
+                  'pr-review-state-face)))))
 
 (defun pr-review--insert-link (title url)
   "Insert a link URL with TITLE."
@@ -324,6 +326,20 @@ It will be inserted at the beginning."
                      (pr-review--goto-section-with-value .id)
                      (recenter)))
           (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
+
+(defun pr-review--insert-in-diff-checkrun-annotation (annotation)
+  "Insert CheckRun ANNOTATION inside the diff section."
+  (let-alist annotation
+    (save-excursion
+      (when (pr-review--goto-diff-line .path "RIGHT" .location.end.line)
+        (forward-line)
+        (insert
+         (concat
+          (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
+          (pr-review--propertize-keyword (format "[%s]" .annotationLevel))
+          (propertize (format " %s: %s" .title .message) 'face 'pr-review-in-diff-thread-title-face)
+          "\n")
+         )))))
 
 (defun pr-review--insert-review-thread-section (top-comment review-thread)
   "Insert review thread section with TOP-COMMENT and REVIEW-THREAD."
@@ -750,7 +766,10 @@ it can be displayed in a single line."
           (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
           (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
           (mapcar (lambda (x) (cons x 'event))
-                  (pr-review--normalize-group-timeline-items (let-alist pr .timelineItems.nodes))))))
+                  (pr-review--normalize-group-timeline-items (let-alist pr .timelineItems.nodes)))))
+        (status-check-rollup (let-alist
+                                 (nth 0 (let-alist pr .latestCommits.nodes))
+                               .commit.statusCheckRollup)))
     (setq timeline-items
           (seq-sort-by (lambda (item) (let-alist (car item) (or .createdAt "")))
                        #'string< timeline-items))
@@ -803,10 +822,7 @@ it can be displayed in a single line."
         ('event
          (pr-review--insert-event-section (car timeline-item)))))
     (insert "\n")
-    (let ((status-check-rollup (let-alist
-                                   (nth 0 (let-alist pr .latestCommits.nodes))
-                                 .commit.statusCheckRollup))
-          (required-contexts (let-alist pr .baseRef.refUpdateRule.requiredStatusCheckContexts)))
+    (let ((required-contexts (let-alist pr .baseRef.refUpdateRule.requiredStatusCheckContexts)))
       (when (or status-check-rollup required-contexts)
         (pr-review--insert-check-section status-check-rollup required-contexts)
         (insert "\n")))
@@ -822,7 +838,11 @@ it can be displayed in a single line."
     (pr-review--insert-review-action-buttons)
     (pr-review--insert-merge-close-reopen-action-buttons)
     (mapc 'pr-review--insert-in-diff-review-thread-link
-          (let-alist pr .reviewThreads.nodes))))
+          (let-alist pr .reviewThreads.nodes))
+    (dolist (context (let-alist status-check-rollup .contexts.nodes))
+      (when (equal (alist-get '__typename context) "CheckRun")
+        (mapc 'pr-review--insert-in-diff-checkrun-annotation
+              (let-alist context .annotations.nodes))))))
 
 (defun pr-review--insert-pr (pr diff)
   "Insert pr buffer with PR and DIFF."

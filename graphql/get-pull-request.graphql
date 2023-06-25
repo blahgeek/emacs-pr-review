@@ -169,6 +169,18 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
                     status
                     conclusion
                     title
+                    annotations(first: 100) {
+                      nodes {
+                        annotationLevel
+                        location {
+                          start { line }
+                          end { line }
+                        }
+                        message
+                        path
+                        title
+                      }
+                    }
                   }
                   ... on StatusContext {
                     context
