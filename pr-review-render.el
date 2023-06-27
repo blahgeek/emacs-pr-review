@@ -33,6 +33,7 @@
 
 (defvar-local pr-review--diff-begin-point 0)
 (defvar-local pr-review--char-pixel-width 0)
+(defvar pr-review--last-read-time nil)  ;; dynamically bound. only assigned temporarily. see pr-review-open
 
 (defcustom pr-review-section-indent-width 2
   "Indent width for nested sections."
@@ -41,7 +42,13 @@
 
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
-  (format-time-string "%b %d, %Y, %H:%M" (date-to-time str)))
+  (concat
+   (propertize (format-time-string "%b %d, %Y, %H:%M" (date-to-time str))
+               'face 'pr-review-timestamp-face)
+   (when (and pr-review--last-read-time (string> str pr-review--last-read-time))
+     (concat " " (propertize "UNREAD"
+                             'face 'pr-review-state-face
+                             'pr-review-unread t)))))
 
 (defun pr-review--propertize-username (username)
   "Format and propertize USERNAME."
@@ -391,8 +398,7 @@ It will be inserted at the beginning."
                   (make-string (* 2 pr-review-section-indent-width) ?\s)
                   (pr-review--propertize-username .author.login)
                   " - "
-                  (propertize (pr-review--format-timestamp .createdAt)
-                              'face 'pr-review-timestamp-face))
+                  (pr-review--format-timestamp .createdAt))
                 (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width))
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
@@ -431,7 +437,7 @@ It will be inserted at the beginning."
             " - "
             (pr-review--propertize-keyword .state)
             " - "
-            (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
+            (pr-review--format-timestamp .createdAt))
           (unless (string-empty-p .body)
             (pr-review--insert-html .bodyHTML))
           (insert "\n")
@@ -451,7 +457,7 @@ It will be inserted at the beginning."
         (propertize "Commented by " 'face 'magit-section-heading)
         (pr-review--propertize-username .author.login)
         " - "
-        (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))
+        (pr-review--format-timestamp .createdAt))
       (pr-review--insert-html .bodyHTML)
       (insert "\n"))))
 
@@ -545,7 +551,7 @@ It will be inserted at the beginning."
         (when .createdAt
           (concat
            " - "
-           (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face))))
+           (pr-review--format-timestamp .createdAt))))
       ;; body
       (pcase .__typename
         ("PullRequestCommit"
@@ -797,7 +803,7 @@ it can be displayed in a single line."
               " - "
               (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
               " - "
-              (propertize (pr-review--format-timestamp .createdAt) 'face 'pr-review-timestamp-face)
+              (pr-review--format-timestamp .createdAt)
               " - ")
       (pr-review--insert-subscription-info pr)
       (insert "\n\n")

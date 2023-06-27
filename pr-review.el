@@ -188,23 +188,31 @@ This is used to jump to specific section after opening the buffer."
       (match-string 1 fragment))))
 
 ;;;###autoload
-(defun pr-review-open (repo-owner repo-name pr-id &optional new-window anchor)
+(defun pr-review-open (repo-owner repo-name pr-id &optional new-window anchor last-read-time)
   "Open review buffer for REPO-OWNER/REPO-NAME PR-ID (number).
 Open in current window if NEW-WINDOW is nil, in other window otherwise.
 ANCHOR is a database id that may be present in the url fragment
 of a github pr notification, if it's not nil, try to jump to specific
-location after open."
+location after open.
+LAST-READ-TIME is the time when the PR is last read (in ISO string, mostly from notification buffer),
+if it's not nil, newer comments will be highlighted, and it will jump to first unread comment
+if ANCHOR is nil."
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
     (unless (eq major-mode 'pr-review-mode)
       (pr-review-mode))
     (setq-local pr-review--pr-path (list repo-owner repo-name pr-id))
-    (pr-review-refresh)
+    (let ((pr-review--last-read-time last-read-time))
+      (pr-review-refresh))
+    (unless (and anchor (pr-review-goto-database-id anchor))
+      (when-let ((m (text-property-search-forward 'pr-review-unread t t)))
+        (goto-char (prop-match-beginning m))))
     (funcall (if new-window
                  'switch-to-buffer-other-window
                'switch-to-buffer)
              (current-buffer))
-    (when anchor  ;; need to call this after switching to buffer as required by `recenter'
-      (pr-review-goto-database-id anchor))))
+    ;; for some known reason, recenter only works reliably after a redisplay
+    (redisplay)
+    (recenter)))
 
 (defun pr-review--find-url-in-buffer ()
   "Return a possible pr url in current buffer.

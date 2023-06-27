@@ -483,7 +483,8 @@ Valid state (string): IGNORED, SUBSCRIBED, UNSUBSCRIBED."
     (pr-review-refresh)))
 
 (defun pr-review-goto-database-id (database-id)
-  "Goto section with DATABASE-ID, which is used as the anchor in github urls."
+  "Goto section with DATABASE-ID, which is used as the anchor in github urls.
+Return t if found, nil otherwise."
   (let (pos)
     (save-excursion
       (goto-char (point-min))
@@ -498,7 +499,7 @@ Valid state (string): IGNORED, SUBSCRIBED, UNSUBSCRIBED."
         (setq pos (prop-match-beginning match))))
     (when pos
       (goto-char pos)
-      (recenter))))
+      t)))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

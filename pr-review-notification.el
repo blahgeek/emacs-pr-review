@@ -302,13 +302,12 @@ Confirm if there's mark entries."
       (tabulated-list-put-tag "-"))
     (if (equal .subject.type "PullRequest")
         (let ((pr-id (when (string-match (rx (group (+ (any digit))) eos) .subject.url)
-                       (match-string 1 .subject.url)))
-              (anchor (when (string-match (rx (group (+ (any digit))) eos) (or .subject.latest_comment_url ""))
-                        (match-string 1 .subject.latest_comment_url))))
+                       (match-string 1 .subject.url))))
           (pr-review-open .repository.owner.login .repository.name
                           (string-to-number pr-id)
                           nil  ;; new window
-                          anchor))
+                          nil  ;; anchor nil; do not go to latest comment, use last_read_at
+                          .last_read_at))
       (browse-url .subject.url))))
 
 ;;;###autoload
