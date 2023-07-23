@@ -64,7 +64,7 @@
     (concat (let-alist entry
               (concat (propertize (downcase .state) 'face 'pr-review-listview-status-face) " "))
             (when assigned
-              (propertize "assisnged " 'face 'pr-review-listview-status-face))
+              (propertize "assigned " 'face 'pr-review-listview-status-face))
             (when review-requested (propertize "review_requested " 'face 'pr-review-listview-status-face))
             (when commenters
               (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-listview-unimportant-activity-face))

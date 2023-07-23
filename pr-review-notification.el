@@ -171,8 +171,8 @@ Confirm if there's mark entries."
                 (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
             (when new-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
             (cond
-             (new-assigned (propertize "+assisnged " 'face 'pr-review-listview-important-activity-face))
-             (assigned (propertize "assisnged " 'face 'pr-review-listview-status-face)))
+             (new-assigned (propertize "+assigned " 'face 'pr-review-listview-important-activity-face))
+             (assigned (propertize "assigned " 'face 'pr-review-listview-status-face)))
             (cond
              (new-review-requested (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
              (review-requested (propertize "review_requested " 'face 'pr-review-listview-status-face)))
