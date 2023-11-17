@@ -626,43 +626,49 @@ It will be inserted at the beginning."
     (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
                                   (pr-review--propertize-keyword
                                    (or (alist-get 'state status-check-rollup) "UNKNOWN"))))
-    (let ((valid-context-or-names (mapcar (lambda (node) (or (alist-get 'context node)
+    ;; for REQUIRED: show "*" instead of "-"
+    (let ((required-item-bullet-point (propertize "* " 'pr-review-eldoc-content "Required"))
+          (valid-context-or-names (mapcar (lambda (node) (or (alist-get 'context node)
                                                              (alist-get 'name node)))
                                           (let-alist status-check-rollup .contexts.nodes))))
       (mapc (lambda (required-context)
               (unless (member required-context valid-context-or-names)
-                (insert "- "
+                (insert required-item-bullet-point
                         (propertize required-context 'face 'pr-review-author-face)
                         ": "
-                        (propertize "REQUIRED" 'face 'pr-review-error-state-face)
+                        (propertize "EXPECTED" 'face 'pr-review-error-state-face)
                         "\n")))
-            required-contexts))
-    (mapc (lambda (node)
-            (let-alist node
-              (pcase .__typename
-                ("CheckRun"
-                 (insert (concat "- "
-                                 (propertize .name 'face 'pr-review-author-face)
-                                 ": "
-                                 (pr-review--propertize-keyword .status)
-                                 (when .conclusion
-                                   (concat " - "
-                                           (pr-review--propertize-keyword .conclusion)))
-                                 (when .title
-                                   (concat " - " .title))
-                                 "\n")))
-                ("StatusContext"
-                 (insert (concat "- "
-                                 (propertize .context 'face 'pr-review-author-face)
-                                 ": "
-                                 (pr-review--propertize-keyword .state)
-                                 (when .description
-                                   (concat " - " .description))
-                                 " "))
-                 (when .targetUrl
-                   (pr-review--insert-link "Details" .targetUrl))
-                 (insert "\n")))))
-          (let-alist status-check-rollup .contexts.nodes))
+            required-contexts)
+      (mapc (lambda (node)
+              (let-alist node
+                (pcase .__typename
+                  ("CheckRun"
+                   (insert (concat (if (member .name required-contexts)
+                                       required-item-bullet-point
+                                     "- ")
+                                   (propertize .name 'face 'pr-review-author-face)
+                                   ": "
+                                   (pr-review--propertize-keyword .status)
+                                   (when .conclusion
+                                     (concat " - "
+                                             (pr-review--propertize-keyword .conclusion)))
+                                   (when .title
+                                     (concat " - " .title))
+                                   "\n")))
+                  ("StatusContext"
+                   (insert (concat (if (member .context required-contexts)
+                                       required-item-bullet-point
+                                     "- ")
+                                   (propertize .context 'face 'pr-review-author-face)
+                                   ": "
+                                   (pr-review--propertize-keyword .state)
+                                   (when .description
+                                     (concat " - " .description))
+                                   " "))
+                   (when .targetUrl
+                     (pr-review--insert-link "Details" .targetUrl))
+                   (insert "\n")))))
+            (let-alist status-check-rollup .contexts.nodes)))
     (insert "\n")))
 
 (defun pr-review--build-top-comment-id-to-review-thread-map (pr)
