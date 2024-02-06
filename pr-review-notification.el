@@ -41,6 +41,7 @@
     (define-key map (kbd "C-c C-s") #'pr-review-notification-execute-mark)
     (define-key map (kbd "C-c C-r") #'pr-review-notification-mark-read)
     (define-key map (kbd "C-c C-d") #'pr-review-notification-mark-delete)
+    (define-key map (kbd "C-c C-o") #'pr-review-notification-open-in-browser)
     map))
 
 (defvar pr-review--notification-mode-map-setup-for-evil-done nil)
@@ -54,7 +55,8 @@
       (kbd "u") #'pr-review-notification-remove-mark
       (kbd "r") #'pr-review-notification-mark-read
       (kbd "d") #'pr-review-notification-mark-delete
-      (kbd "x") #'pr-review-notification-execute-mark)))
+      (kbd "x") #'pr-review-notification-execute-mark
+      (kbd "o") #'pr-review-notification-open-in-browser)))
 
 (define-derived-mode pr-review-notification-mode pr-review-listview-mode
   "PrReviewNotification"
@@ -309,6 +311,13 @@ Confirm if there's mark entries."
                           nil  ;; anchor nil; do not go to latest comment, use last_read_at
                           .last_read_at))
       (browse-url .subject.url))))
+
+(defun pr-review-notification-open-in-browser ()
+  "Open current notification entry in browser."
+  (interactive)
+  (when-let ((entry (get-text-property (point) 'tabulated-list-id)))
+    (let-alist entry
+      (browse-url-with-browser-kind 'external .subject.url))))
 
 ;;;###autoload
 (defun pr-review-notification ()
