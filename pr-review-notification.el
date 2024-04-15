@@ -229,7 +229,7 @@ Confirm if there's mark entries."
                        (vector
                         (pr-review--listview-format-time .updated_at)
                         (pr-review--notification-format-type entry)
-                        (format "[%s] %s" .repository.full_name .subject.title)
+                        (format "[%s] %s" .repository.full_name (string-trim-right .subject.title))
                         (pr-review--notification-format-activities entry)
                         ;; .reason
                         ))))
