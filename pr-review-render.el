@@ -697,6 +697,25 @@ It will be inserted at the beginning."
           "#000000"
         "#ffffff"))))
 
+(defun pr-review--insert-labels-info (pr-info)
+  "Insert labels and action for PR-INFO."
+  (let-alist pr-info
+    (when .labels.nodes
+      (insert
+       "  "
+       (mapconcat (lambda (label)
+                    (propertize (alist-get 'name label)
+                                'face
+                                `(:background ,(concat "#" (alist-get 'color label))
+                                              :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
+                                              :inherit pr-review-label-face)))
+                  .labels.nodes " ")))
+    (insert "  ")
+    (insert-button
+     "Edit Labels"
+     'face 'pr-review-button-face
+     'action (lambda (_) (call-interactively #'pr-review-set-labels)))))
+
 (defun pr-review--insert-review-action-buttons ()
   "Insert text and buttons for review actions."
   (insert "Submit review with action:")
@@ -791,16 +810,7 @@ it can be displayed in a single line."
               (propertize .baseRefName 'face 'pr-review-branch-face)
               " <- "
               (propertize .headRefName 'face 'pr-review-branch-face))
-      (when .labels.nodes
-        (insert
-         "  "
-         (mapconcat (lambda (label)
-                      (propertize (alist-get 'name label)
-                                  'face
-                                  `(:background ,(concat "#" (alist-get 'color label))
-                                                :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
-                                                :inherit pr-review-label-face)))
-                    .labels.nodes " ")))
+      (pr-review--insert-labels-info pr)
       (insert "\n")
       (insert (pr-review--propertize-keyword .state)
               (if (equal .state "OPEN")

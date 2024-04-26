@@ -409,5 +409,51 @@ The PR info would be cached if possible."
             notifications)))
 
 
+(defun pr-review--get-repo-labels-1 (repo-owner repo-name)
+  "Get labels for repo REPO-OWNER/REPO-NAME.
+Return hashtable, name -> alist, which constists of at least 'node_id, 'description, 'color."
+  (let ((items (apply #'ghub-request
+                     "GET" (format "/repos/%s/%s/labels" repo-owner repo-name)
+                     '((per_page . "100"))
+                     :unpaginate t
+                     (pr-review--ghub-common-request-args)))
+        (result (make-hash-table :test 'equal)))
+    (dolist (item items)
+      (let-alist item
+        (when .name
+          (puthash .name item result))))
+    result))
+
+;; alist of (repo-owner . repo-name) -> labels
+(defvar pr-review--cached-repo-labels nil)
+
+(defun pr-review--get-repo-labels ()
+  "Get labels for current repo, cached.
+See `pr-review--get-repo-labels-1' for return value."
+  (let ((repo-owner (car pr-review--pr-path))
+        (repo-name (cadr pr-review--pr-path)))
+    (if-let ((res (alist-get (cons repo-owner repo-name)
+                             pr-review--cached-repo-labels nil nil 'equal)))
+        res
+      (message "Fetching labels for %s/%s..." repo-owner repo-name)
+      (setq res (pr-review--get-repo-labels-1 repo-owner repo-name))
+      (setf (alist-get (cons repo-owner repo-name)
+                       pr-review--cached-repo-labels nil nil 'equal)
+            res)
+      res)))
+
+(defun pr-review--clear-labels (pr-node-id)
+  "Clear labels for pull-request PR-NODE-ID."
+  (pr-review--execute-graphql
+   'clear-labels
+   `((input . ((labelableId . ,pr-node-id))))))
+
+(defun pr-review--add-labels (pr-node-id label-node-ids)
+  "Add labels LABEL-NODE-IDS to pull-request PR-NODE-ID."
+  (pr-review--execute-graphql
+   'add-labels
+   `((input . ((labelableId . ,pr-node-id)
+               (labelIds . ,label-node-ids))))))
+
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here

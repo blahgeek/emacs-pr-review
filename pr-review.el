@@ -50,6 +50,7 @@
     (define-key map (kbd "C-c C-f") #'pr-review-goto-file)
     (define-key map (kbd "C-c C-o") #'pr-review-open-in-default-browser)
     (define-key map (kbd "C-c C-q") #'pr-review-request-reviews)
+    (define-key map (kbd "C-c C-l") #'pr-review-set-labels)
     map))
 
 (defvar pr-review--mode-map-setup-for-evil-done nil)

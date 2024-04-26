@@ -78,6 +78,8 @@ Some other keybindings:
 - `C-c C-r`: refresh (reload) current buffer
 - `C-c C-v`: view current changed file under point (either HEAD or BASE version, based on current point) in a separated buffer
 - `C-c C-o`: open this pull request in browser
+- `C-c C-q`: request reviewers
+- `C-c C-l`: set labels
 
 Evil users will also find some familiar keybindings. See `describe-mode` for more details.
 

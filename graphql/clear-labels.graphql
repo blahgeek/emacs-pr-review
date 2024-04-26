@@ -1,0 +1,5 @@
+mutation($input: ClearLabelsFromLabelableInput!) {
+  clearLabelsFromLabelable(input: $input) {
+    clientMutationId
+  }
+}

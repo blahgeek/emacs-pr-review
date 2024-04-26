@@ -472,6 +472,38 @@ When called interactively, user can select reviewers from list."
     (pr-review--post-request-reviews (alist-get 'id pr-review--pr-info) ids)
     (pr-review-refresh)))
 
+(defun pr-review-set-labels (label-names)
+  "Set labels for current PR, with a list of label names LABEL-NAMES.
+This will override all existing labels (will clear all labels on empty).
+When called interactively, user can select labels from list."
+  (interactive
+   (list
+    (let* ((repo-labels (pr-review--get-repo-labels))
+           (completion-extra-properties
+            (list :annotation-function
+                  (lambda (name)
+                    (concat " " (alist-get 'description (gethash name repo-labels)))))))
+      (completing-read-multiple
+       "Labels: "
+       (hash-table-keys repo-labels)
+       nil 'require-match
+       (string-join
+        (mapcar (lambda (label-node) (alist-get 'name label-node))
+                (let-alist pr-review--pr-info .labels.nodes))
+        ",")))))
+  (let* ((repo-labels (pr-review--get-repo-labels))
+         (label-node-ids (mapcar (lambda (name)
+                                   (let ((label (gethash name repo-labels)))
+                                     (unless label
+                                       (error "Label %s not found" name))
+                                     (alist-get 'node_id label)))
+                                 label-names))
+         (pr-node-id (alist-get 'id pr-review--pr-info)))
+    (pr-review--clear-labels pr-node-id)
+    (when label-node-ids
+      (pr-review--add-labels pr-node-id label-node-ids))
+    (pr-review-refresh)))
+
 (defun pr-review-update-subscription (state)
   "Update subscription to STATE for current PR.
 Valid state (string): IGNORED, SUBSCRIBED, UNSUBSCRIBED."
