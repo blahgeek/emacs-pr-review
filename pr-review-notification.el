@@ -142,48 +142,49 @@ Confirm if there's mark entries."
 (defun pr-review--notification-format-activities (entry)
   "Format activities for notification ENTRY."
   (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
-        new-mentioned new-assigned new-review-requested new-commenters
-        assigned review-requested old-commenters)
+        ;; for the following me-* status: t means yes, 'new means yes+new
+        me-mentioned me-assigned me-review-requested
+        new-participants old-participants)
     (let-alist entry
       (when (and (null .last_read_at) .pr-info.author.login)
-        (push .pr-info.author.login new-commenters))  ;; add author to commenters if no last read
-      (setq assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
-                                 .pr-info.assignees.nodes)
-            review-requested (cl-find-if (lambda (node) (equal my-login (let-alist node .requestedReviewer.login)))
-                                         .pr-info.reviewRequests.nodes)))
+        (push .pr-info.author.login new-participants))  ;; add author to commenters if no last read
+      (setq me-assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
+                                    .pr-info.assignees.nodes)
+            me-review-requested (cl-find-if (lambda (node) (equal my-login (let-alist node .requestedReviewer.login)))
+                                            .pr-info.reviewRequests.nodes)))
     (dolist (timeline-item (let-alist entry .pr-info.timelineItemsSince.nodes))
       (let-alist timeline-item
         (pcase .__typename
           ("AssignedEvent" (when (equal my-login .assignee.login)
-                             (setq new-assigned t)))
+                             (setq me-assigned 'new)))
           ("ReviewRequestedEvent" (when (equal my-login .requestedReviewer.login)
-                                    (setq new-review-requested t)))
+                                    (setq me-review-requested 'new)))
           ("MentionedEvent" (when (equal my-login .actor.login)
-                              (setq new-mentioned t)))
+                              (setq me-mentioned t)))
           ((or "IssueComment" "PullRequestReview")
            (unless (equal my-login .author.login)
-             (push .author.login new-commenters)))
+             (push .author.login new-participants)))
           )))
     (dolist (participant-item (let-alist entry .pr-info.participants.nodes))
       (let ((login (let-alist participant-item .login)))
-        (unless (or (equal login my-login) (member login new-commenters))
-          (push login old-commenters))))
+        (unless (or (equal login my-login) (member login new-participants))
+          (push login old-participants))))
     (concat (let-alist entry
               (when (and .pr-info.state (not (equal .pr-info.state "OPEN")))
                 (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
-            (when new-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
-            (cond
-             (new-assigned (propertize "+assigned " 'face 'pr-review-listview-important-activity-face))
-             (assigned (propertize "assigned " 'face 'pr-review-listview-status-face)))
-            (cond
-             (new-review-requested (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
-             (review-requested (propertize "review_requested " 'face 'pr-review-listview-status-face)))
-            (when new-commenters
+            (when me-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
+            (pcase me-assigned
+              ('new (propertize "+assigned " 'face 'pr-review-listview-important-activity-face))
+              ('t (propertize "assigned " 'face 'pr-review-listview-status-face)))
+            (pcase me-review-requested
+             ('new (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
+             ('t (propertize "review_requested " 'face 'pr-review-listview-status-face)))
+            (when new-participants
               (mapconcat (lambda (s) (format "+%s " s))
-                         (delete-dups (reverse new-commenters)) ""))
-            (when old-commenters
+                         (delete-dups (reverse new-participants)) ""))
+            (when old-participants
               (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-listview-unimportant-activity-face))
-                         (delete-dups (reverse old-commenters)) ""))
+                         (delete-dups (reverse old-participants)) ""))
             )))
 
 (defun pr-review--notification-refresh ()
