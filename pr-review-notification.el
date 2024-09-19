@@ -128,9 +128,10 @@ Confirm if there's mark entries."
 (defun pr-review--notification-format-type (entry)
   "Format type column of notification ENTRY."
   (let-alist entry
-    (if (not (equal .subject.type "PullRequest"))
-        .subject.type
-      "PullReq")))
+    (pcase .subject.type
+      ("PullRequest" "PR")
+      ("Issue" "ISS")
+      (_ .subject.type))))
 
 (defun pr-review--notification-unsubscribed (entry)
   "Return the subscription state if ENTRY is unsubscribed, nil if subscribed."
@@ -210,7 +211,7 @@ Confirm if there's mark entries."
 
   (setq-local tabulated-list-format
               [("Updated at" 12 pr-review--notification-entry-sort-updated-at)
-               ("Type" 8 t)
+               ("Type" 4 t)
                ("Title" 85 nil)
                ("Activities" 25 nil)])
   (let* ((resp-orig (pr-review--get-notifications-with-extra-pr-info
