@@ -144,14 +144,20 @@ Confirm if there's mark entries."
   (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
         ;; for the following me-* status: t means yes, 'new means yes+new
         me-mentioned me-assigned me-review-requested
-        new-participants old-participants)
+        new-participants all-participants
+        all-reviewers approved-reviewers rejected-reviewers)
     (let-alist entry
       (when (and (null .last_read_at) .pr-info.author.login)
         (push .pr-info.author.login new-participants))  ;; add author to commenters if no last read
-      (setq me-assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
+      (dolist (opinionated-review .pr-info.latestOpinionatedReviews.nodes)
+        (let-alist opinionated-review
+          (pcase .state
+            ("APPROVED" (push .author.login approved-reviewers))
+            ("CHANGES_REQUESTED" (push .author.login rejected-reviewers)))))
+      (setq all-reviewers (mapcar (lambda (n) (let-alist n .requestedReviewer.login)) .pr-info.reviewRequests.nodes)
+            me-assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
                                     .pr-info.assignees.nodes)
-            me-review-requested (cl-find-if (lambda (node) (equal my-login (let-alist node .requestedReviewer.login)))
-                                            .pr-info.reviewRequests.nodes)))
+            me-review-requested (member my-login all-reviewers)))
     (dolist (timeline-item (let-alist entry .pr-info.timelineItemsSince.nodes))
       (let-alist timeline-item
         (pcase .__typename
@@ -168,7 +174,9 @@ Confirm if there's mark entries."
     (dolist (participant-item (let-alist entry .pr-info.participants.nodes))
       (let ((login (let-alist participant-item .login)))
         (unless (or (equal login my-login) (member login new-participants))
-          (push login old-participants))))
+          (push login all-participants))))
+    (setq all-participants (append (delete-dups (reverse new-participants))
+                                   (delete-dups (reverse all-participants))))
     (concat (let-alist entry
               (when (and .pr-info.state (not (equal .pr-info.state "OPEN")))
                 (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
@@ -179,13 +187,21 @@ Confirm if there's mark entries."
             (pcase me-review-requested
              ('new (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
              ('t (propertize "review_requested " 'face 'pr-review-listview-status-face)))
-            (when new-participants
-              (mapconcat (lambda (s) (format "+%s " s))
-                         (delete-dups (reverse new-participants)) ""))
-            (when old-participants
-              (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-listview-unimportant-activity-face))
-                         (delete-dups (reverse old-participants)) ""))
-            )))
+            (when all-participants
+              (mapconcat
+               (lambda (x)
+                 (let ((is-new (member x new-participants)))
+                   (propertize
+                    (concat
+                     (when is-new "+")
+                     x
+                     (cond
+                      ((member x approved-reviewers) "#")
+                      ((member x rejected-reviewers) "!")
+                      ((member x all-reviewers) "?")))
+                    'face
+                    (if is-new nil 'pr-review-listview-unimportant-activity-face))))
+               all-participants " ")))))
 
 (defun pr-review--notification-refresh ()
   "Refresh notification buffer."

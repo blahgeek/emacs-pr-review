@@ -7,6 +7,10 @@ repository(owner: "%1$s", name: "%2$s") {
     reviewRequests(last: 10) { nodes { requestedReviewer {
       ... on User { login }
     } } }
+    latestOpinionatedReviews(first: 10) { nodes {
+      author { login }
+      state
+    } }
     participants(last: 10) { nodes { login }}
     timelineItemsSince: timelineItems(since: "%4$s", last: 50, itemTypes: [ASSIGNED_EVENT, REVIEW_REQUESTED_EVENT, MENTIONED_EVENT, ISSUE_COMMENT, PULL_REQUEST_REVIEW]) {
       nodes {
