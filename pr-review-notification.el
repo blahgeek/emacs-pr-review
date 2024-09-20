@@ -143,13 +143,17 @@ Confirm if there's mark entries."
 (defun pr-review--notification-format-activities (entry)
   "Format activities for notification ENTRY."
   (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
+        (op (let-alist entry .pr-info.author.login))
         ;; for the following me-* status: t means yes, 'new means yes+new
         me-mentioned me-assigned me-review-requested
         new-participants all-participants
         all-reviewers approved-reviewers rejected-reviewers)
     (let-alist entry
-      (when (and (null .last_read_at) .pr-info.author.login)
-        (push .pr-info.author.login new-participants))  ;; add author to commenters if no last read
+      (when op
+        (push op all-participants)
+        (unless .last_read_at
+          ;; add author to commenters if no last read
+          (push op new-participants)))
       (dolist (opinionated-review .pr-info.latestOpinionatedReviews.nodes)
         (let-alist opinionated-review
           (pcase .state
@@ -176,8 +180,8 @@ Confirm if there's mark entries."
       (let ((login (let-alist participant-item .login)))
         (unless (or (equal login my-login) (member login new-participants))
           (push login all-participants))))
-    (setq all-participants (append (delete-dups (reverse new-participants))
-                                   (delete-dups (reverse all-participants))))
+    (setq all-participants (delete-dups (append (reverse new-participants)
+                                                (reverse all-participants))))
     (concat (let-alist entry
               (when (and .pr-info.state (not (equal .pr-info.state "OPEN")))
                 (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
@@ -197,6 +201,7 @@ Confirm if there's mark entries."
                      (when is-new "+")
                      x
                      (cond
+                      ((equal x op) "@")
                       ((member x approved-reviewers) "#")
                       ((member x rejected-reviewers) "!")
                       ((member x all-reviewers) "?")))
