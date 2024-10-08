@@ -65,12 +65,17 @@
                     query variables
                     (pr-review--ghub-common-request-args))))
     (let-alist res
-      (when .errors
-        (message "%s" query)
-        (message "%s" res)
-        (let-alist (car .errors)
-          (error "Error while making graphql request: %s: %s"
-                 .type .message)))
+      (unless .data
+        (cond
+         (.errors
+          (let-alist (car .errors)
+            (error "Error while making graphql request: %s: %s"
+                   .type .message)))
+         (.message
+          (error "Error while making graphql request: %s"
+                 .message))
+         (t
+          (error "Error while making graphql request"))))
       .data)))
 
 (defun pr-review--execute-graphql (name variables)
@@ -344,12 +349,15 @@ last_updated is the from the notification.")
   "Get a list of notifications.
 If INCLUDE-READ is not nil, all notifications are returned,
 PAGE is the number of pages of the notifications, start from 1."
-  (apply #'ghub-request
-         "GET" "/notifications"
-         `((all . ,(if include-read "true" "false"))
-           (per_page . ,(number-to-string pr-review--get-notifications-per-page))
-           (page . ,(number-to-string page)))
-         (pr-review--ghub-common-request-args)))
+  (let ((res (apply #'ghub-request
+                    "GET" "/notifications"
+                    `((all . ,(if include-read "true" "false"))
+                      (per_page . ,(number-to-string pr-review--get-notifications-per-page))
+                      (page . ,(number-to-string page)))
+                    (pr-review--ghub-common-request-args))))
+    (when (let-alist res (and .status (string-match-p "^[45]" .status)))
+      (error "Error while getting notifications: %s" res))
+    res))
 
 (defun pr-review--mark-notification-read (id)
   "Mark notification ID as read."
