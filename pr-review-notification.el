@@ -169,7 +169,7 @@ Confirm if there's mark entries."
         (pcase .__typename
           ("AssignedEvent" (when (equal my-login .assignee.login)
                              (setq me-assigned 'new)))
-          ("ReviewRequestedEvent" (when (equal my-login .requestedReviewer.login)
+          ("ReviewRequestedEvent" (when (and (equal my-login .requestedReviewer.login) (not me-approved))
                                     (setq me-review-requested 'new)))
           ("MentionedEvent" (when (equal my-login .actor.login)
                               (setq me-mentioned t)))
