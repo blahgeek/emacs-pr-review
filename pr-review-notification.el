@@ -145,7 +145,7 @@ Confirm if there's mark entries."
   (let ((my-login (let-alist (pr-review--whoami-cached) .viewer.login))
         (op (let-alist entry .pr-info.author.login))
         ;; for the following me-* status: t means yes, 'new means yes+new
-        me-mentioned me-assigned me-review-requested
+        me-mentioned me-assigned me-review-requested me-approved
         new-participants all-participants
         all-reviewers approved-reviewers rejected-reviewers)
     (let-alist entry
@@ -162,7 +162,8 @@ Confirm if there's mark entries."
       (setq all-reviewers (mapcar (lambda (n) (let-alist n .requestedReviewer.login)) .pr-info.reviewRequests.nodes)
             me-assigned (cl-find-if (lambda (node) (equal my-login (let-alist node .login)))
                                     .pr-info.assignees.nodes)
-            me-review-requested (member my-login all-reviewers)))
+            me-review-requested (member my-login all-reviewers)
+            me-approved (member my-login approved-reviewers)))
     (dolist (timeline-item (let-alist entry .pr-info.timelineItemsSince.nodes))
       (let-alist timeline-item
         (pcase .__typename
@@ -192,6 +193,8 @@ Confirm if there's mark entries."
             (pcase me-review-requested
              ('new (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
              ('t (propertize "review_requested " 'face 'pr-review-listview-status-face)))
+            (when me-approved
+              (propertize "approved " 'face 'pr-review-listview-status-face))
             (when all-participants
               (mapconcat
                (lambda (x)
