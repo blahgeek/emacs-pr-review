@@ -59,20 +59,6 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
       
-      comments(first: 100) {
-        nodes {
-          id
-          databaseId
-          viewerCanUpdate
-          author {
-            login
-          }
-          body
-          bodyHTML
-          createdAt
-        }
-      }
-      
       latestOpinionatedReviews(first: 100) {
         nodes {
           author {
@@ -82,34 +68,6 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
           bodyHTML
           createdAt
           state
-        }
-      }
-      
-      reviews(first: 100) {
-        nodes {
-          id
-          databaseId
-          viewerCanUpdate
-          body
-          bodyHTML
-          state
-          author {
-            login
-          }
-          createdAt
-          
-          comments(first: 100) {
-            nodes {
-              id
-              databaseId
-              diffHunk
-              path
-              author {
-                login
-              }
-              createdAt
-            }
-          }
         }
       }
       
@@ -195,9 +153,47 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
         }
       }
 
-      timelineItems(first: 100, itemTypes: [ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT, UNASSIGNED_EVENT, REOPENED_EVENT, CROSS_REFERENCED_EVENT]) {
+      timelineItems(last: 100, itemTypes: [ISSUE_COMMENT, PULL_REQUEST_REVIEW, ASSIGNED_EVENT, MERGED_EVENT, CLOSED_EVENT, HEAD_REF_FORCE_PUSHED_EVENT, PULL_REQUEST_COMMIT, REVIEW_REQUESTED_EVENT, REVIEW_REQUEST_REMOVED_EVENT, UNASSIGNED_EVENT, REOPENED_EVENT, CROSS_REFERENCED_EVENT]) {
+        totalCount
+        filteredCount
         nodes {
           __typename
+          ... on IssueComment {
+            id
+            databaseId
+            viewerCanUpdate
+            author {
+              login
+            }
+            body
+            bodyHTML
+            createdAt
+          }
+          ... on PullRequestReview {
+            id
+            databaseId
+            viewerCanUpdate
+            body
+            bodyHTML
+            state
+            author {
+              login
+            }
+            createdAt
+            
+            comments(first: 100) {
+              nodes {
+                id
+                databaseId
+                diffHunk
+                path
+                author {
+                  login
+                }
+                createdAt
+              }
+            }
+          }
           ... on AssignedEvent {
             id
             createdAt

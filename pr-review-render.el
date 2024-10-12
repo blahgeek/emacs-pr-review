@@ -461,7 +461,7 @@ It will be inserted at the beginning."
       (pr-review--insert-html .bodyHTML)
       (insert "\n"))))
 
-(defun pr-review--insert-event-section (event)
+(defun pr-review--insert-misc-event-section (event)
   "Insert event section with EVENT."
   (let-alist event
     (magit-insert-section (pr-review--event-section .id 'hide)
@@ -746,8 +746,7 @@ It will be inserted at the beginning."
   "Check if timelineItems ITEM-A and ITEM-B should be grouped."
   (and (equal (alist-get '__typename item-a) (alist-get '__typename item-b))
        (pcase (alist-get '__typename item-a)
-         ("PullRequestCommit"
-          (not (let-alist item-a .commit.pushedDate)))
+         ("PullRequestCommit" t)
          ((or "AssignedEvent"
               "UnassignedEvent"
               "HeadRefForcePushedEvent"
@@ -782,9 +781,6 @@ it can be displayed in a single line."
               (let (res)
                 (setq res (cons `(groupedItems . ,group)
                                 (car (last group))))
-                (let-alist res
-                  (when (equal .__typename "PullRequestCommit")
-                    (setf (alist-get 'createdAt res) .commit.pushedDate)))
                 res))
             (nreverse groups))))
 
@@ -793,17 +789,10 @@ it can be displayed in a single line."
   (let ((top-comment-id-to-review-thread
          (pr-review--build-top-comment-id-to-review-thread-map pr))
         (timeline-items
-         (append
-          (mapcar (lambda (x) (cons x 'review)) (let-alist pr .reviews.nodes))
-          (mapcar (lambda (x) (cons x 'comment)) (let-alist pr .comments.nodes))
-          (mapcar (lambda (x) (cons x 'event))
-                  (pr-review--normalize-group-timeline-items (let-alist pr .timelineItems.nodes)))))
+         (pr-review--normalize-group-timeline-items (let-alist pr .timelineItems.nodes)))
         (status-check-rollup (let-alist
                                  (nth 0 (let-alist pr .latestCommits.nodes))
                                .commit.statusCheckRollup)))
-    (setq timeline-items
-          (seq-sort-by (lambda (item) (let-alist (car item) (or .createdAt "")))
-                       #'string< timeline-items))
     (let-alist pr
       (pr-review--insert-link .url .url)
       (insert "\n"
@@ -836,13 +825,12 @@ it can be displayed in a single line."
         (pr-review--insert-commit-section .commits.nodes)
         (insert "\n")))
     (dolist (timeline-item timeline-items)
-      (pcase (cdr timeline-item)
-        ('review
-         (pr-review--insert-review-section (car timeline-item) top-comment-id-to-review-thread))
-        ('comment
-         (pr-review--insert-comment-section (car timeline-item)))
-        ('event
-         (pr-review--insert-event-section (car timeline-item)))))
+      (pcase (alist-get '__typename timeline-item)
+        ("PullRequestReview"
+         (pr-review--insert-review-section timeline-item top-comment-id-to-review-thread))
+        ("IssueComment"
+         (pr-review--insert-comment-section timeline-item))
+        (_ (pr-review--insert-misc-event-section timeline-item))))
     (insert "\n")
     (let ((required-contexts (let-alist pr .baseRef.refUpdateRule.requiredStatusCheckContexts)))
       (when (or status-check-rollup required-contexts)
