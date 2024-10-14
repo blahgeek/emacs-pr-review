@@ -823,7 +823,11 @@ it can be displayed in a single line."
       (insert "\n")
       (when .commits.nodes
         (pr-review--insert-commit-section .commits.nodes)
-        (insert "\n")))
+        (insert "\n"))
+      (when (< .timelineItems.filteredCount .timelineItems.totalCount)
+        (insert (propertize (format "Timeline items truncated. Displaying last %d of %d.\n"
+                                    .timelineItems.filteredCount .timelineItems.totalCount)
+                            'face 'pr-review-error-state-face))))
     (dolist (timeline-item timeline-items)
       (pcase (alist-get '__typename timeline-item)
         ("PullRequestReview"
