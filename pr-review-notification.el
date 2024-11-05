@@ -30,8 +30,16 @@
 
 (declare-function pr-review-open "pr-review")
 
-(defvar-local pr-review-notification-include-read t)
-(defvar-local pr-review-notification-include-unsubscribed t)
+
+(defcustom pr-review-notification-include-read t
+  "Include read notifications."
+  :type 'boolean
+  :group 'pr-review)
+
+(defcustom pr-review-notification-include-unsubscribed t
+  "Include unsubscribed notifications."
+  :type 'boolean
+  :group 'pr-review)
 
 (defvar pr-review-notification-mode-map
   (let ((map (make-sparse-keymap)))
