@@ -304,7 +304,9 @@ See `pr-review--get-assignable-users-1' for return format."
                (subscribableId . ,pr-node-id))))))
 
 
-(defvar pr-review--whoami-cache nil "Cache for `pr-review--whoami'.")
+(defvar pr-review--whoami-cache nil
+  "Cache for `pr-review--whoami'.
+\((host . username) . actualvalue), The cons is used for invalidating cache.")
 
 (defun pr-review--whoami ()
   "Return current user info."
@@ -312,8 +314,13 @@ See `pr-review--get-assignable-users-1' for return format."
 
 (defun pr-review--whoami-cached ()
   "Return current user info, cached."
-  (or pr-review--whoami-cache
-      (setq pr-review--whoami-cache (pr-review--whoami))))
+  (if (equal (car pr-review--whoami-cache) (cons pr-review-ghub-host pr-review-ghub-username))
+      (cdr pr-review--whoami-cache)
+    (let ((res (pr-review--whoami)))
+      (setq pr-review--whoami-cache
+            (cons (cons pr-review-ghub-host pr-review-ghub-username)
+                  res))
+      res)))
 
 (defun pr-review--batch-get-pr-info-for-notifications (prs)
   "Batch get PR info for notifications.
