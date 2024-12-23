@@ -336,19 +336,30 @@ Used for interactive selection one of them."
      (apply-partially #'pr-review--update-pr-title (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
-(defun pr-review-view-file ()
-  "View the full file under current point (must in some diff)."
-  (interactive)
-  (pcase-let ((`(,side . (,filepath . ,line)) (pr-review--get-diff-line-info (point))))
-    (when (and side filepath line)
-      (let* ((content (pr-review--fetch-file filepath
-                                             (if (equal side "LEFT") 'base 'head)))
-             (tempfile (make-temp-file (if (equal side "LEFT") "BASE~" "HEAD~")
-                                       nil
-                                       (concat "~" (file-name-nondirectory filepath))
-                                       content)))
-        (with-current-buffer (find-file-other-window tempfile)
-          (goto-char (point-min))
+(defun pr-review-view-file (head-or-base filepath &optional line)
+  "View the full file content in a temporary buffer.
+By default, view the file under current point (must in some diff).
+When invoked with prefix, prompt for head-or-base and filepath."
+  (interactive
+   (let (head-or-base filepath line)
+     (when-let* ((line-info (pr-review--get-diff-line-info (point))))
+       (setq head-or-base (if (equal (car line-info) "LEFT") 'base 'head)
+             filepath (cadr line-info)
+             line (cddr line-info)))
+     (when (or current-prefix-arg (null head-or-base) (null filepath))
+       (let ((res (completing-read "Ref: " '("head" "base") nil t)))
+         (setq head-or-base (intern res)))
+       (setq filepath (read-from-minibuffer "File path: " filepath)))
+     (list head-or-base filepath line)))
+  (when (and head-or-base filepath)
+    (let* ((content (pr-review--fetch-file filepath head-or-base))
+           (tempfile (make-temp-file (concat (upcase (symbol-name head-or-base)) "~")
+                                     nil
+                                     (concat "~" (file-name-nondirectory filepath))
+                                     content)))
+      (with-current-buffer (find-file-other-window tempfile)
+        (goto-char (point-min))
+        (when line
           (forward-line (1- line)))))))
 
 (defun pr-review-open-in-default-browser ()
