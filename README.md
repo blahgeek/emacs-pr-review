@@ -25,6 +25,17 @@ machine api.github.com login <YOUR_USERNAME>^emacs-pr-review password <YOUR_GITH
 You may customize username and api host (for github enterprise instances) using [ghub](https://magit.vc/manual/ghub/Github-Configuration-Variables.html#Github-Configuration-Variables),
 or you can also set `pr-review-ghub-username` and `pr-review-ghub-host` for pr-review only.
 
+<details>
+  <summary>For github enterprise users</summary>
+  
+The detailed setup for different github enterprise sites may vary. Just for reference:
+  
+  1. set pr-review-ghub-host to "github.corp.my-company.com/api/v3"
+  2. set pr-review-ghub-username
+  3. in ~/.authinfo, use `machine github.corp.my-company.com/api/v3 login my-username^emacs-pr-review password ghp_xxxxxxxxxxxx`
+
+</details>
+
 ## Usage
 
 This package provides the following entrypoint:
