@@ -91,6 +91,8 @@ Some other keybindings:
 - `C-c C-o`: open this pull request in browser
 - `C-c C-q`: request reviewers
 - `C-c C-l`: set labels
+- `C-c C-f`: view current file; invoke with `C-u` prefix to select head or base
+- `C-c C-d`: open current diff; invoke with `C-u` prefix to select file
 
 Evil users will also find some familiar keybindings. See `describe-mode` for more details.
 

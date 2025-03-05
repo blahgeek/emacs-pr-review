@@ -48,6 +48,7 @@
     (define-key map (kbd "C-c C-e") #'pr-review-context-edit)
     (define-key map (kbd "C-c C-v") #'pr-review-view-file)
     (define-key map (kbd "C-c C-f") #'pr-review-goto-file)
+    (define-key map (kbd "C-c C-d") #'pr-review-ediff-file)
     (define-key map (kbd "C-c C-o") #'pr-review-open-in-default-browser)
     (define-key map (kbd "C-c C-q") #'pr-review-request-reviews)
     (define-key map (kbd "C-c C-l") #'pr-review-set-labels)

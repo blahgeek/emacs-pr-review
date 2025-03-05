@@ -336,6 +336,12 @@ Used for interactive selection one of them."
      (apply-partially #'pr-review--update-pr-title (alist-get 'id pr-review--pr-info))
      'refresh-after-exit)))
 
+(defun pr-review--make-temp-file (head-or-base filepath content)
+  (make-temp-file (concat (upcase (symbol-name head-or-base)) "~")
+                  nil
+                  (concat "~" (file-name-nondirectory filepath))
+                  content))
+
 (defun pr-review-view-file (head-or-base filepath &optional line)
   "View the full file content in a temporary buffer.
 By default, view the file under current point (must in some diff).
@@ -353,14 +359,27 @@ When invoked with prefix, prompt for head-or-base and filepath."
      (list head-or-base filepath line)))
   (when (and head-or-base filepath)
     (let* ((content (pr-review--fetch-file filepath head-or-base))
-           (tempfile (make-temp-file (concat (upcase (symbol-name head-or-base)) "~")
-                                     nil
-                                     (concat "~" (file-name-nondirectory filepath))
-                                     content)))
+           (tempfile (pr-review--make-temp-file head-or-base filepath content)))
       (with-current-buffer (find-file-other-window tempfile)
         (goto-char (point-min))
         (when line
           (forward-line (1- line)))))))
+
+(defun pr-review-ediff-file (filepath)
+  "View the diff using `ediff'.
+By default, view the file under current point (must in some diff).
+When invoked with prefix, prompt for filepath."
+  (interactive
+   (let (filepath)
+     (when-let* ((line-info (pr-review--get-diff-line-info (point))))
+       (setq filepath (cadr line-info)))
+     (when (or current-prefix-arg (null filepath))
+       (setq filepath (completing-read "File:" (pr-review--find-all-file-names) nil 'require-match)))
+     (list filepath)))
+  (let* ((base-content (pr-review--fetch-file filepath 'base))
+         (head-content (pr-review--fetch-file filepath 'head)))
+    (ediff-files (pr-review--make-temp-file 'base filepath base-content)
+                 (pr-review--make-temp-file 'head filepath head-content))))
 
 (defun pr-review-open-in-default-browser ()
   "Open current PR in default browser."
@@ -440,13 +459,17 @@ edit description, edit review comment, edit comment, edit pending diff review."
     (mapcan #'pr-review--find-all-file-sections
             (oref section children))))
 
+(defun pr-review--find-all-file-names ()
+  "Return all file names in current buffer."
+  (mapcar (lambda (section) (oref section value))
+          (pr-review--find-all-file-sections magit-root-section)))
+
 (defun pr-review-goto-file (filepath)
   "Goto section for FILEPATH in current buffer.
 When called interactively, user can select filepath from list."
   (interactive (list (completing-read
                       "Goto file:"
-                      (mapcar (lambda (section) (oref section value))
-                              (pr-review--find-all-file-sections magit-root-section))
+                      (pr-review--find-all-file-names)
                       nil 'require-match)))
   (when-let ((section (seq-find (lambda (section) (equal (oref section value) filepath))
                                 (pr-review--find-all-file-sections magit-root-section))))

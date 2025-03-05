@@ -135,7 +135,7 @@ Same as `pr-review--fetch-compare', but cached in buffer variable."
 
 (defun pr-review--fetch-file (filepath head-or-base)
   "Fetch file content for FILEPATH for current review buffer.
-If HEAD-OR-BASE is t, fetch the head version; otherwise base version."
+HEAD-OR-BASE should be \='head or \='base, it determines the version to fetch."
   (let* ((repo-owner (car pr-review--pr-path))
          (repo-name (cadr pr-review--pr-path))
          (url (format "/repos/%s/%s/contents/%s" repo-owner repo-name filepath))
