@@ -144,6 +144,17 @@
   "Face used for reaction emojis."
   :group 'pr-review)
 
+(defface pr-review-fringe-comment-pending
+  '((t :inherit warning))
+  "Face used for fringe icons for pending comments.")
+
+(defface pr-review-fringe-comment-open
+  '((t :inherit font-lock-constant-face))
+  "Face used for fringe icons for open comments.")
+
+(defface pr-review-fringe-comment-resolved
+  '((t :inherit shadow))
+  "Face used for fringe icons for resolved comments.")
 
 ;; section classes
 (defclass pr-review--review-section (magit-section)

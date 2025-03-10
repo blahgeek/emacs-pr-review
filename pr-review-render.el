@@ -40,6 +40,11 @@
   :type 'integer
   :group 'pr-review)
 
+(defcustom pr-review-fringe-icons t
+  "Display icons in the fringe indicating PR-review comments."
+  :type 'boolean
+  :group 'pr-review)
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (concat
@@ -308,6 +313,30 @@ return t on success."
     (goto-char (prop-match-beginning match))
     t))
 
+
+(define-fringe-bitmap 'pr-review-comment
+  [#b0000000000000000
+   #b0000000000000000
+   #b0000000000000000
+   #b0000000000000000
+   #b0000000000000000
+   #b0111111111111100
+   #b1111111111111110
+   #b1111111111111110
+   #b1110000000011110
+   #b1111111111111110
+   #b1111111111111110
+   #b1110000011111110
+   #b1111111111111110
+   #b1111111111111110
+   #b1111111111111110
+   #b0111111111111100
+   #b0000000011111000
+   #b0000000001111000
+   #b0000000000111000
+   #b0000000000011000]
+  nil 16 'center)
+
 (defun pr-review--insert-in-diff-pending-review-thread (pending-review-thread &optional allow-fallback)
   "Insert a pending review thread inside the diff for PENDING-REVIEW-THREAD.
 If ALLOW-FALLBACK is non-nil, when the line for the thread cannot be found.
@@ -319,12 +348,18 @@ It will be inserted at the beginning."
                   allow-fallback)
           (forward-line)
           (setq beg (point))
-          (insert (propertize (concat "> PENDING comment for "
-                                      (if .startLine
-                                          (format "%s:%s to %s:%s" .startSide .startLine .side .line)
-                                        (format "%s:%s" .side .line))
-                                      "\n")
-                              'face 'pr-review-in-diff-pending-begin-face))
+          (insert (apply #'propertize
+                         (concat "> PENDING comment for "
+                                 (if .startLine
+                                     (format "%s:%s to %s:%s" .startSide .startLine .side .line)
+                                   (format "%s:%s" .side .line))
+                                 "\n")
+                         'face 'pr-review-in-diff-pending-begin-face
+                         (when pr-review-fringe-icons
+                           (list 'line-prefix
+                                 (propertize " " 'display '(left-fringe
+                                                            pr-review-comment
+                                                            pr-review-fringe-comment-pending))))))
           (pr-review--insert-fontified .body 'gfm-mode nil
                                        'pr-review-in-diff-pending-body-face)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
@@ -345,7 +380,8 @@ It will be inserted at the beginning."
                .path .diffSide .line)
           (forward-line)
           (insert
-           (propertize
+           (apply
+            #'propertize
             (concat (format "> %s comments from " (length .comments.nodes))
                     (string-join
                      (seq-uniq
@@ -358,7 +394,13 @@ It will be inserted at the beginning."
             'face 'pr-review-in-diff-thread-title-face
             'pr-review-eldoc-content (let-alist (car .comments.nodes)
                                        (concat (pr-review--propertize-username .author.login)
-                                               ": " .body))))
+                                               ": " .body))
+            (when pr-review-fringe-icons
+              (list 'line-prefix
+                    (propertize " " 'display `(left-fringe pr-review-comment
+                                                           (if .isResolved
+                                                               pr-review-fringe-comment-resolved
+                                                             pr-review-fringe-comment-open)))))))
           (insert-button
            "Go to thread"
            'face 'pr-review-button-face

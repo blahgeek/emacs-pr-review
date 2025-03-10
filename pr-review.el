@@ -139,6 +139,9 @@ Which means that all sections are collapsed."
                                         pr-review--commit-section
                                         pr-review--description-section
                                         pr-review--event-section))
+  (when pr-review-fringe-icons
+    (unless (and left-fringe-width (>= left-fringe-width 16))
+      (setq left-fringe-width 16)))
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
   (add-hook 'eldoc-documentation-functions #'pr-review--eldoc-function nil t)
   (eldoc-mode))
