@@ -241,7 +241,7 @@ It's used as the default value of `pr-review'."
                                           (when default-pr-path
                                             (apply #'format " (default: %s/%s/%s)"
                                                    default-pr-path))
-                                          ":"))))
+                                          ": "))))
      (if (string-empty-p input-url)
          (or default-url "")
        input-url))
