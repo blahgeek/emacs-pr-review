@@ -202,20 +202,31 @@ Used if `pr-review-always-use-blocks' is t."
   :type 'regexp
   :group 'pr-review)
 
-(defvar pr-review-diff-font-lock-syntax 'hunk-also
+(defcustom pr-review-diff-font-lock-syntax 'hunk-also
   "This value is assigned to `diff-font-lock-syntax' to fontify hunk with diff-mode.
-Set to nil to disable source language syntax highlighting.")
+Set to nil to disable source language syntax highlighting."
+  :type '(choice (const :tag "Don't highlight syntax" nil)
+                 (const :tag "Hunk-based only" hunk-only)
+                 (const :tag "Highlight syntax" t)
+                 (const :tag "Allow hunk-based fallback" hunk-also))
+  :group 'pr-review)
 
-(defvar pr-review-diff-hunk-limit 4
-  "Maximum number of lines shown for diff hunks in review threads.")
+(defcustom pr-review-diff-hunk-limit 4
+  "Maximum number of lines shown for diff hunks in review threads."
+  :type 'number
+  :group 'pr-review)
 
-(defvar pr-review-always-use-blocks nil
+(defcustom pr-review-always-use-blocks nil
   "Always use multi-line blocks, even for elements that are usually on one line.
-With this option, in-diff review thread links becomes blocks.")
+With this option, in-diff review thread links becomes blocks."
+  :type 'boolean
+  :group 'pr-review)
 
-(defvar pr-review-always-use-buttons nil
+(defcustom pr-review-always-use-buttons nil
   "Always use separate buttons, and don't make blocks clickable.
-With this option, buttons are added to diff snippets inside review threads.")
+With this option, buttons are added to diff snippets inside review threads."
+  :type 'boolean
+  :group 'pr-review)
 
 (provide 'pr-review-common)
 ;;; pr-review-common.el ends here
