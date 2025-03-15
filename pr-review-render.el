@@ -115,13 +115,15 @@
              (t
               (shr-generic td)))))))))
 
-(defun pr-review--insert-html (body &optional indent)
+(defun pr-review--insert-html (body &optional indent extra-face)
   "Insert html content BODY.
 INDENT is an optional number, if provided,
-INDENT count of spaces are added at the start of every line."
+INDENT count of spaces are added at the start of every line.
+If EXTRA-FACE is given, it is added to the inserted text in addition to other faces."
   (let ((shr-indentation (* (or indent 0) pr-review--char-pixel-width))
         (shr-external-rendering-functions '((div . pr-review--shr-tag-div)))
         (start (point))
+        end
         dom)
     (with-temp-buffer
       (insert body)
@@ -133,7 +135,8 @@ INDENT count of spaces are added at the start of every line."
       (goto-char start)
       (shr-insert-document dom)
       ;; delete the inserted " "
-      (delete-char 1))
+      (delete-char 1)
+      (setq end (point)))
     (when (> shr-indentation 0)
       ;; shr-indentation does not work for images and code block
       ;; let's fix it: prepend space for any lines that does not starts with a space
@@ -145,7 +148,10 @@ INDENT count of spaces are added at the start of every line."
                       (eq 'space (car-safe (get-text-property (point) 'display))))
             (beginning-of-line)
             (insert (propertize " " 'display `(space :width (,shr-indentation)))))
-          (forward-line))))))
+          (forward-line))))
+    ;; additional face for the inserted region
+    (when extra-face
+      (pr-review--decorate-region start end extra-face))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
   "Fontify content BODY as LANG-MODE, return propertized string.
@@ -191,11 +197,29 @@ MARGIN count of spaces are added at the start of every line."
         (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
       res)))
 
-
-(defun pr-review--insert-fontified (body lang-mode &optional margin)
+(defun pr-review--insert-fontified (body lang-mode &optional margin extra-face)
   "Fontify BODY as LANG-MODE with MARGIN and insert it, see `pr-review--fontify'."
-  (insert (pr-review--fontify body lang-mode margin)))
+  (let ((start (point))
+        end)
+    (insert (pr-review--fontify body lang-mode margin))
+    (setq end (point))
+    (when extra-face
+      (pr-review--decorate-region start end extra-face))))
 
+(defun pr-review--decorate-region (start end face)
+  "Add extra FACE to the region in buffer from START to END."
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char start)
+      (while (< (point) end)
+        (let ((next-change (or (next-single-property-change (point) 'face (current-buffer) end)
+                               end)))
+          (let* ((old-faces (get-text-property (point) 'face))
+                 (new-faces (if (listp old-faces)
+                                (append old-faces (list face))
+                              (list old-faces face))))
+            (put-text-property (point) next-change 'face new-faces)
+            (goto-char next-change)))))))
 
 (defun pr-review--insert-diff (diff)
   "Insert pull request diff DIFF, wash it using magit."
@@ -294,7 +318,8 @@ It will be inserted at the beginning."
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          (pr-review--insert-fontified .body 'gfm-mode)
+          (pr-review--insert-fontified .body 'gfm-mode nil
+                                       'pr-review-in-diff-pending-body-face)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
@@ -309,30 +334,61 @@ It will be inserted at the beginning."
       (save-excursion
         (when (pr-review--goto-diff-line
                .path .diffSide .line)
-          (forward-line)
-          (insert
-           (propertize
-            (concat (format "> %s comments from " (length .comments.nodes))
-                    (string-join
-                     (seq-uniq
-                      (mapcar (lambda (cmt)
-                                (concat "@" (alist-get 'login (alist-get 'author cmt))))
-                              .comments.nodes))
-                     ", ")
-                    (when .isResolved " - RESOLVED")
-                    "  ")
-            'face 'pr-review-in-diff-thread-title-face
-            'pr-review-eldoc-content (let-alist (car .comments.nodes)
-                                       (concat (pr-review--propertize-username .author.login)
-                                               ": " .body))))
-          (insert-button
-           "Go to thread"
-           'face 'pr-review-button-face
-           'action (lambda (_)
-                     (push-mark)
-                     (pr-review--goto-section-with-value .id)
-                     (recenter)))
-          (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
+          (let ((text
+                 (format "%s comments from %s"
+                         (length .comments.nodes)
+                         (string-join
+                          (seq-uniq
+                           (mapcar (lambda (cmt)
+                                     (concat "@" (alist-get 'login (alist-get 'author cmt))))
+                                   .comments.nodes))
+                          ", ")))
+                (hint
+                 (let-alist (car .comments.nodes)
+                   (concat (pr-review--propertize-username .author.login)
+                           ": " .body)))
+                (action (lambda (_)
+                          (push-mark)
+                          (pr-review--goto-section-with-value .id)
+                          (recenter))))
+            (forward-line)
+            (if pr-review-always-use-blocks
+                ;; Render block.
+                (progn
+                  (insert (propertize
+                           (concat "> REVIEW THREAD"
+                                   (when .isResolved " - RESOLVED")
+                                   "\n")
+                           'face 'pr-review-in-diff-thread-begin-face
+                           'pr-review-eldoc-content hint))
+                  (insert (propertize
+                           (format "%s\n" text)
+                           'face 'pr-review-in-diff-thread-body-face))
+                  (insert-button "Go to thread ↑"
+                                 'face '(pr-review-button-face
+                                         pr-review-in-diff-thread-body-face)
+                                 'action action)
+                  (insert (propertize
+                           "\n"
+                           'face 'pr-review-in-diff-thread-body-face))
+                  (insert (propertize
+                           " \n"
+                           'face 'pr-review-in-diff-thread-end-face)))
+              ;; Render single line.
+              (insert (propertize
+                       (concat "> "
+                               text
+                               (when .isResolved " - RESOLVED")
+                               "  ")
+                       'face 'pr-review-in-diff-thread-title-face
+                       'pr-review-eldoc-content hint))
+              (insert-button "Go to thread"
+                             'face '(pr-review-button-face
+                                     pr-review-in-diff-thread-title-face)
+                             'action action)
+              (insert (propertize
+                       "\n"
+                       'face 'pr-review-in-diff-thread-title-face)))))))))
 
 (defun pr-review--insert-in-diff-checkrun-annotation (annotation)
   "Insert CheckRun ANNOTATION inside the diff section."
@@ -363,7 +419,7 @@ It will be inserted at the beginning."
           .path (when .line (if .startLine
                                 (format ":%s-%s" .startLine .line)
                               (format ":%s" .line))))
-         'face 'magit-section-secondary-heading)
+         'face 'pr-review-thread-item-title-face)
         (when (eq t .isResolved)
           (concat " - " (propertize "RESOLVED" 'face 'pr-review-info-state-face)))
         (when (eq t .isOutdated)
@@ -372,21 +428,32 @@ It will be inserted at the beginning."
      (make-string pr-review-section-indent-width ?\s)
      (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
     (let ((diffhunk-lines (split-string (alist-get 'diffHunk top-comment) "\n"))
+          (action (lambda (_)
+                    (push-mark)
+                    (let-alist review-thread
+                      (pr-review--goto-diff-line .path .diffSide .line)
+                      (recenter))))
           beg end)
       (setq beg (point))
       (while (> (length diffhunk-lines) 4)   ;; diffHunk may be very long, only keep last 4 lines
         (setq diffhunk-lines (cdr diffhunk-lines)))
       (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
-                                   pr-review-section-indent-width)
+                                   pr-review-section-indent-width
+                                   'pr-review-thread-diff-body-face)
       (setq end (point))
-      (make-button beg end
-                   'face nil
-                   'help-echo "Click to go to the line in diff."
-                   'action (lambda (_)
-                             (push-mark)
-                             (let-alist review-thread
-                               (pr-review--goto-diff-line .path .diffSide .line)
-                               (recenter)))))
+      (if pr-review-always-use-buttons
+          ;; Render separate button.
+          (progn
+            (insert-button "Go to diff ↓"
+                           'face '(pr-review-button-face
+                                   pr-review-thread-diff-body-face)
+                           'action action)
+            (insert (propertize "\n" 'face 'pr-review-thread-diff-body-face)))
+        ;; The whole diff is a button.
+        (make-button beg end
+                     'face nil
+                     'help-echo "Click to go to the line in diff."
+                     'action action)))
     (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
@@ -399,7 +466,8 @@ It will be inserted at the beginning."
                   (pr-review--propertize-username .author.login)
                   " - "
                   (pr-review--format-timestamp .createdAt))
-                (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width))
+                (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width)
+                                        'pr-review-thread-comment-face)
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
 
@@ -634,7 +702,7 @@ It will be inserted at the beginning."
       (mapc (lambda (required-context)
               (unless (member required-context valid-context-or-names)
                 (insert required-item-bullet-point
-                        (propertize required-context 'face 'pr-review-author-face)
+                        (propertize required-context 'face 'pr-review-check-face)
                         ": "
                         (propertize "EXPECTED" 'face 'pr-review-error-state-face)
                         "\n")))
@@ -646,7 +714,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .name required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .name 'face 'pr-review-author-face)
+                                   (propertize .name 'face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .status)
                                    (when .conclusion
@@ -659,7 +727,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .context required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .context 'face 'pr-review-author-face)
+                                   (propertize .context 'face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .state)
                                    (when .description
