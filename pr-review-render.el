@@ -160,7 +160,7 @@ MARGIN count of spaces are added at the start of every line."
   (with-current-buffer
       (get-buffer-create (format " *pr-review-fontification:%s*" lang-mode))
     (let ((inhibit-modification-hooks nil)
-          (diff-font-lock-syntax 'hunk-also))
+          (diff-font-lock-syntax pr-review-diff-font-lock-syntax))
       (erase-buffer)
       (insert "\n"  ;; insert a newline at first line (and ignore later)
                     ;; to workaround markdown metadata syntax: https://github.com/jrblevin/markdown-mode/issues/328
@@ -435,7 +435,8 @@ It will be inserted at the beginning."
                       (recenter))))
           beg end)
       (setq beg (point))
-      (while (> (length diffhunk-lines) 4)   ;; diffHunk may be very long, only keep last 4 lines
+      ;; diffHunk may be very long, only keep last N lines
+      (while (> (length diffhunk-lines) pr-review-diff-hunk-limit)
         (setq diffhunk-lines (cdr diffhunk-lines)))
       (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
                                    pr-review-section-indent-width

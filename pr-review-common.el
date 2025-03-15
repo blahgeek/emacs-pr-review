@@ -202,6 +202,13 @@ Used if `pr-review-always-use-blocks' is t."
   :type 'regexp
   :group 'pr-review)
 
+(defvar pr-review-diff-font-lock-syntax 'hunk-also
+  "This value is assigned to `diff-font-lock-syntax' to fontify hunk with diff-mode.
+Set to nil to disable source language syntax highlighting.")
+
+(defvar pr-review-diff-hunk-limit 4
+  "Maximum number of lines shown for diff hunks in review threads.")
+
 (defvar pr-review-always-use-blocks nil
   "Always use multi-line blocks, even for elements that are usually on one line.
 With this option, in-diff review thread links becomes blocks.")
