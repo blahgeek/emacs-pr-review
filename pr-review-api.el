@@ -223,7 +223,7 @@ BODY: review comment body."
                  (event . ,event)
                  (pullRequestId . ,pr-node-id))))
     (when pending-threads
-      (setq input (cons `(threads . ,pending-threads) input)))
+      (setq input (cons `(threads . ,(vconcat pending-threads)) input)))
     (pr-review--execute-graphql 'add-review
                                 `((input . ,input)))))
 
@@ -294,7 +294,7 @@ See `pr-review--get-assignable-users-1' for return format."
   "Request review from USER-NODE-IDS for PR-NODE-ID."
   (pr-review--execute-graphql 'request-reviews
                               `((input . ((pullRequestId . ,pr-node-id)
-                                          (userIds . ,user-node-ids))))))
+                                          (userIds . ,(vconcat user-node-ids)))))))
 
 (defun pr-review--post-subscription-update (pr-node-id state)
   "Send API request to update subscription to STATE for PR-NODE-ID."
@@ -468,7 +468,7 @@ See `pr-review--get-repo-labels-1' for return value."
   (pr-review--execute-graphql
    'add-labels
    `((input . ((labelableId . ,pr-node-id)
-               (labelIds . ,label-node-ids))))))
+               (labelIds . ,(vconcat label-node-ids)))))))
 
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here
