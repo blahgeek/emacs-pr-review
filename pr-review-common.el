@@ -59,6 +59,11 @@
   "Face used for author names."
   :group 'pr-review)
 
+(defface pr-review-check-face
+  '((t :inherit pr-review-author-face))
+  "Face used for check names."
+  :group 'pr-review)
+
 (defface pr-review-timestamp-face
   '((t :slant italic))
   "Face used for timestamps."
@@ -80,7 +85,7 @@
   :group 'pr-review)
 
 (defface pr-review-thread-item-title-face
-  '((t :inherit bold))
+  '((t :inherit magit-section-secondary-heading))
   "Face used for title of review thread item."
   :group 'pr-review)
 
@@ -89,19 +94,53 @@
   "Face used for the beginning of thread diff hunk."
   :group 'pr-review)
 
+(defface pr-review-thread-diff-body-face
+  '((t))
+  "Extra face added to the body of thread diff hunk."
+  :group 'pr-review)
+
 (defface pr-review-thread-diff-end-face
   '((t :overline t :extend t :inherit font-lock-comment-face))
   "Face used for the beginning of thread diff hunk."
   :group 'pr-review)
 
+(defface pr-review-thread-comment-face
+  '((t))
+  "Extra face added to review thread comments."
+  :group 'pr-review)
+
 (defface pr-review-in-diff-thread-title-face
   '((t :inherit font-lock-comment-face))
-  "Face used for the title of the in-diff thread title."
+  "Face used for the title of the in-diff review-thread-link title.
+Used if `pr-review-always-use-blocks' is nil (default)."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-thread-begin-face
+  '((t :underline t :extend t :inherit bold-italic))
+  "Face used for start line of review-thread-link block in the diff.
+Used if `pr-review-always-use-blocks' is t."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-thread-body-face
+  '((t))
+  "Extra face added to the comment body of review-thread-link block in the diff.
+Used if `pr-review-always-use-blocks' is t."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-thread-end-face
+  '((t :overline t :extend t :height 0.5 :inherit bold-italic))
+  "Face used for end line of review-thread-link block in the diff.
+Used if `pr-review-always-use-blocks' is t."
   :group 'pr-review)
 
 (defface pr-review-in-diff-pending-begin-face
   '((t :underline t :extend t :inherit bold-italic))
   "Face used for start line of pending-thread in the diff."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-pending-body-face
+  '((t))
+  "Extra face added to the comment body of pending-thread in the diff."
   :group 'pr-review)
 
 (defface pr-review-in-diff-pending-end-face
@@ -161,6 +200,32 @@
 (defcustom pr-review-generated-file-regexp ".*generated/.*"
   "Regexe that match generated files, which would be collapsed in review."
   :type 'regexp
+  :group 'pr-review)
+
+(defcustom pr-review-diff-font-lock-syntax 'hunk-also
+  "This value is assigned to `diff-font-lock-syntax' to fontify hunk with diff-mode.
+Set to nil to disable source language syntax highlighting."
+  :type '(choice (const :tag "Don't highlight syntax" nil)
+                 (const :tag "Hunk-based only" hunk-only)
+                 (const :tag "Highlight syntax" t)
+                 (const :tag "Allow hunk-based fallback" hunk-also))
+  :group 'pr-review)
+
+(defcustom pr-review-diff-hunk-limit 4
+  "Maximum number of lines shown for diff hunks in review threads."
+  :type 'number
+  :group 'pr-review)
+
+(defcustom pr-review-always-use-blocks nil
+  "Always use multi-line blocks, even for elements that are usually on one line.
+With this option, in-diff review thread links becomes blocks."
+  :type 'boolean
+  :group 'pr-review)
+
+(defcustom pr-review-always-use-buttons nil
+  "Always use separate buttons, and don't make blocks clickable.
+With this option, buttons are added to diff snippets inside review threads."
+  :type 'boolean
   :group 'pr-review)
 
 (provide 'pr-review-common)
