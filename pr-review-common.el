@@ -183,12 +183,16 @@
   :type 'regexp
   :group 'pr-review)
 
-(defvar pr-review-diff-font-lock-syntax 'hunk-also
+(defcustom pr-review-diff-font-lock-syntax 'hunk-also
   "This value is assigned to `diff-font-lock-syntax' to fontify hunk with diff-mode.
-Set to nil to disable source language syntax highlighting.")
+Set to nil to disable source language syntax highlighting."
+  :type (get 'diff-font-lock-syntax 'custom-type)
+  :group 'pr-review)
 
-(defvar pr-review-diff-hunk-limit 4
-  "Maximum number of lines shown for diff hunks in review threads.")
+(defcustom pr-review-diff-hunk-limit 4
+  "Maximum number of lines shown for diff hunks in review threads."
+  :type 'number
+  :group 'pr-review)
 
 (provide 'pr-review-common)
 ;;; pr-review-common.el ends here
