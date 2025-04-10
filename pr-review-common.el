@@ -59,6 +59,11 @@
   "Face used for author names."
   :group 'pr-review)
 
+(defface pr-review-check-face
+  '((t :inherit pr-review-author-face))
+  "Face used for check names."
+  :group 'pr-review)
+
 (defface pr-review-timestamp-face
   '((t :slant italic))
   "Face used for timestamps."
@@ -80,7 +85,7 @@
   :group 'pr-review)
 
 (defface pr-review-thread-item-title-face
-  '((t :inherit bold))
+  '((t :inherit magit-section-secondary-heading))
   "Face used for title of review thread item."
   :group 'pr-review)
 
@@ -89,9 +94,19 @@
   "Face used for the beginning of thread diff hunk."
   :group 'pr-review)
 
+(defface pr-review-thread-diff-body-face
+  '((t))
+  "Extra face added to the body of thread diff hunk."
+  :group 'pr-review)
+
 (defface pr-review-thread-diff-end-face
   '((t :overline t :extend t :inherit font-lock-comment-face))
   "Face used for the beginning of thread diff hunk."
+  :group 'pr-review)
+
+(defface pr-review-thread-comment-face
+  '((t))
+  "Extra face added to review thread comments."
   :group 'pr-review)
 
 (defface pr-review-in-diff-thread-title-face
@@ -102,6 +117,11 @@
 (defface pr-review-in-diff-pending-begin-face
   '((t :underline t :extend t :inherit bold-italic))
   "Face used for start line of pending-thread in the diff."
+  :group 'pr-review)
+
+(defface pr-review-in-diff-pending-body-face
+  '((t))
+  "Extra face added to the comment body of pending-thread in the diff."
   :group 'pr-review)
 
 (defface pr-review-in-diff-pending-end-face

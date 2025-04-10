@@ -115,13 +115,15 @@
              (t
               (shr-generic td)))))))))
 
-(defun pr-review--insert-html (body &optional indent)
+(defun pr-review--insert-html (body &optional indent extra-face)
   "Insert html content BODY.
 INDENT is an optional number, if provided,
-INDENT count of spaces are added at the start of every line."
+INDENT count of spaces are added at the start of every line.
+If EXTRA-FACE is given, it is added to the inserted text in addition to other faces."
   (let ((shr-indentation (* (or indent 0) pr-review--char-pixel-width))
         (shr-external-rendering-functions '((div . pr-review--shr-tag-div)))
         (start (point))
+        end
         dom)
     (with-temp-buffer
       (insert body)
@@ -133,7 +135,8 @@ INDENT count of spaces are added at the start of every line."
       (goto-char start)
       (shr-insert-document dom)
       ;; delete the inserted " "
-      (delete-char 1))
+      (delete-char 1)
+      (setq end (point)))
     (when (> shr-indentation 0)
       ;; shr-indentation does not work for images and code block
       ;; let's fix it: prepend space for any lines that does not starts with a space
@@ -145,7 +148,10 @@ INDENT count of spaces are added at the start of every line."
                       (eq 'space (car-safe (get-text-property (point) 'display))))
             (beginning-of-line)
             (insert (propertize " " 'display `(space :width (,shr-indentation)))))
-          (forward-line))))))
+          (forward-line))))
+    ;; additional face for the inserted region
+    (when extra-face
+      (add-face-text-property start end extra-face))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
   "Fontify content BODY as LANG-MODE, return propertized string.
@@ -191,11 +197,14 @@ MARGIN count of spaces are added at the start of every line."
         (setq res (replace-regexp-in-string (rx bol) (make-string margin ?\s) res)))
       res)))
 
-
-(defun pr-review--insert-fontified (body lang-mode &optional margin)
+(defun pr-review--insert-fontified (body lang-mode &optional margin extra-face)
   "Fontify BODY as LANG-MODE with MARGIN and insert it, see `pr-review--fontify'."
-  (insert (pr-review--fontify body lang-mode margin)))
-
+  (let ((start (point))
+        end)
+    (insert (pr-review--fontify body lang-mode margin))
+    (setq end (point))
+    (when extra-face
+      (add-face-text-property start end extra-face))))
 
 (defun pr-review--insert-diff (diff)
   "Insert pull request diff DIFF, wash it using magit."
@@ -294,7 +303,8 @@ It will be inserted at the beginning."
                                         (format "%s:%s" .side .line))
                                       "\n")
                               'face 'pr-review-in-diff-pending-begin-face))
-          (pr-review--insert-fontified .body 'gfm-mode)
+          (pr-review--insert-fontified .body 'gfm-mode nil
+                                       'pr-review-in-diff-pending-body-face)
           (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
@@ -363,7 +373,7 @@ It will be inserted at the beginning."
           .path (when .line (if .startLine
                                 (format ":%s-%s" .startLine .line)
                               (format ":%s" .line))))
-         'face 'magit-section-secondary-heading)
+         'face 'pr-review-thread-item-title-face)
         (when (eq t .isResolved)
           (concat " - " (propertize "RESOLVED" 'face 'pr-review-info-state-face)))
         (when (eq t .isOutdated)
@@ -377,7 +387,8 @@ It will be inserted at the beginning."
       (while (> (length diffhunk-lines) 4)   ;; diffHunk may be very long, only keep last 4 lines
         (setq diffhunk-lines (cdr diffhunk-lines)))
       (pr-review--insert-fontified (string-join diffhunk-lines "\n") 'diff-mode
-                                   pr-review-section-indent-width)
+                                   pr-review-section-indent-width
+                                   'pr-review-thread-diff-body-face)
       (setq end (point))
       (make-button beg end
                    'face nil
@@ -399,7 +410,8 @@ It will be inserted at the beginning."
                   (pr-review--propertize-username .author.login)
                   " - "
                   (pr-review--format-timestamp .createdAt))
-                (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width))
+                (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width)
+                                        'pr-review-thread-comment-face)
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
 
@@ -634,7 +646,7 @@ It will be inserted at the beginning."
       (mapc (lambda (required-context)
               (unless (member required-context valid-context-or-names)
                 (insert required-item-bullet-point
-                        (propertize required-context 'face 'pr-review-author-face)
+                        (propertize required-context 'face 'pr-review-check-face)
                         ": "
                         (propertize "EXPECTED" 'face 'pr-review-error-state-face)
                         "\n")))
@@ -646,7 +658,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .name required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .name 'face 'pr-review-author-face)
+                                   (propertize .name 'face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .status)
                                    (when .conclusion
@@ -659,7 +671,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .context required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .context 'face 'pr-review-author-face)
+                                   (propertize .context 'face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .state)
                                    (when .description
