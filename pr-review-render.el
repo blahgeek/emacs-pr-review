@@ -119,7 +119,8 @@
   "Insert html content BODY.
 INDENT is an optional number, if provided,
 INDENT count of spaces are added at the start of every line.
-If EXTRA-FACE is given, it is added to the inserted text in addition to other faces."
+If EXTRA-FACE is given, it is added to the inserted text
+in addition to other faces."
   (let ((shr-indentation (* (or indent 0) pr-review--char-pixel-width))
         (shr-external-rendering-functions '((div . pr-review--shr-tag-div)))
         (start (point))

@@ -196,9 +196,10 @@ Open in current window if NEW-WINDOW is nil, in other window otherwise.
 ANCHOR is a database id that may be present in the url fragment
 of a github pr notification, if it's not nil, try to jump to specific
 location after open.
-LAST-READ-TIME is the time when the PR is last read (in ISO string, mostly from notification buffer),
-if it's not nil, newer comments will be highlighted, and it will jump to first unread comment
-if ANCHOR is nil."
+LAST-READ-TIME is the time when the PR is last read (in ISO string,
+mostly from notification buffer),
+if it's not nil, newer comments will be highlighted,
+and it will jump to first unread comment if ANCHOR is nil."
   (with-current-buffer (get-buffer-create (format "*pr-review %s/%s/%s*" repo-owner repo-name pr-id))
     (unless (eq major-mode 'pr-review-mode)
       (pr-review-mode))

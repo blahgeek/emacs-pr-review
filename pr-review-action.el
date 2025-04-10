@@ -234,7 +234,7 @@ Will confirm before sending the request."
 
 (defun pr-review--close-or-reopen-action ()
   "Return the expected action if `pr-review-close-or-reopen' is called.
-Maybe 'close or 'reopen or nil."
+Maybe \='close or \='reopen or nil."
   (pcase (alist-get 'state pr-review--pr-info)
     ("CLOSED" 'reopen)
     ("OPEN" 'close)

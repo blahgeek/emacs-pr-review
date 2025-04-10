@@ -255,7 +255,7 @@ BODY: review comment body."
 
 (defun pr-review--get-assignable-users-1 (repo-owner repo-name)
   "Get assignable users for REPO-OWNER/REPO-NAME.
-Return hashtable of login -> alist of 'id, 'login, 'name."
+Return hashtable of login -> alist of \='id, \='login, \='name."
   (let ((has-next-page t)
         (res (make-hash-table :test 'equal))
         args
@@ -343,7 +343,8 @@ Return list of (id . response)"
 
 (defvar-local pr-review--notifications-pr-info-cache nil
   "Cache of PR infos for notifications.
-A hashtable, key is the notification ID (string), value is (last_updated . pr_info).
+A hashtable, key is the notification ID (string),
+value is (last_updated . pr_info).
 last_updated is the from the notification.")
 
 (defun pr-review--notifications-pr-info-cache-remove (id)
@@ -426,7 +427,8 @@ The PR info would be cached if possible."
 
 (defun pr-review--get-repo-labels-1 (repo-owner repo-name)
   "Get labels for repo REPO-OWNER/REPO-NAME.
-Return hashtable, name -> alist, which constists of at least 'node_id, 'description, 'color."
+Return hashtable, name -> alist, which constists of at least
+\='node_id, \='description, \='color."
   (let ((items (apply #'ghub-request
                      "GET" (format "/repos/%s/%s/labels" repo-owner repo-name)
                      '((per_page . "100"))

@@ -184,7 +184,7 @@
   :group 'pr-review)
 
 (defcustom pr-review-diff-font-lock-syntax 'hunk-also
-  "This value is assigned to `diff-font-lock-syntax' to fontify hunk with diff-mode.
+  "This value is assigned to `diff-font-lock-syntax' to fontify hunk.
 Set to nil to disable source language syntax highlighting."
   :type (get 'diff-font-lock-syntax 'custom-type)
   :group 'pr-review)
