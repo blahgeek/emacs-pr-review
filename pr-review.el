@@ -6,7 +6,7 @@
 ;; Keywords: tools
 ;; Version: 0.1
 ;; URL: https://github.com/blahgeek/emacs-pr-review
-;; Package-Requires: ((emacs "27.1") (magit-section "3.2") (magit "3.2") (markdown-mode "2.5") (ghub "3.5"))
+;; Package-Requires: ((emacs "27.1") (magit-section "4.0") (magit "4.0") (markdown-mode "2.5") (ghub "3.5"))
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -129,6 +129,15 @@ Which means that all sections are collapsed."
   (setq-local magit-hunk-section-map nil
               magit-file-section-map nil
               magit-diff-highlight-hunk-body nil)
+  (setq-local imenu-create-index-function #'magit--imenu-create-index
+              imenu-default-goto-function #'magit--imenu-goto-function
+              magit--imenu-item-types '(pr-review--review-section
+                                        pr-review--comment-section
+                                        pr-review--diff-section
+                                        pr-review--check-section
+                                        pr-review--commit-section
+                                        pr-review--description-section
+                                        pr-review--event-section))
   (add-to-list 'kill-buffer-query-functions 'pr-review--confirm-kill-buffer)
   (add-hook 'eldoc-documentation-functions #'pr-review--eldoc-function nil t)
   (eldoc-mode))
