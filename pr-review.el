@@ -138,7 +138,8 @@ Which means that all sections are collapsed."
   (let* ((pr-info (pr-review--fetch-pr-info))
          (pr-diff (let-alist pr-info
                     (pr-review--fetch-compare-cached
-                     .baseRefOid .headRefOid)))
+                     (or pr-review--selected-commit-base .baseRefOid)
+                     (or pr-review--selected-commit-head .headRefOid))))
          section-id)
     (setq-local pr-review--pr-info pr-info
                 mark-ring nil)

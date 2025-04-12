@@ -84,7 +84,7 @@ There's three most-used keybindings:
 
 There's also buttons (clickable texts) for major actions (e.g. reply, submit review), you can just use them.
 
-Some other keybindings:
+Some other keybindings or commands:
 
 - `C-c C-r`: refresh (reload) current buffer
 - `C-c C-v`: view current changed file under point (either HEAD or BASE version, based on current point) in a separated buffer
@@ -93,6 +93,7 @@ Some other keybindings:
 - `C-c C-l`: set labels
 - `C-c C-f`: view current file; invoke with `C-u` prefix to select head or base
 - `C-c C-d`: open current diff; invoke with `C-u` prefix to select file
+- `M-x pr-review-select-commit`: select only some commits for review
 
 Evil users will also find some familiar keybindings. See `describe-mode` for more details.
 

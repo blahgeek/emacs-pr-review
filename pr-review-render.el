@@ -316,7 +316,9 @@ It will be inserted at the beginning."
 (defun pr-review--insert-in-diff-review-thread-link (review-thread)
   "Insert REVIEW-THREAD inside the diff section."
   (let-alist review-thread
-    (when (not .isOutdated)
+    ;; when only some commits are selected, in-diff review threads are not displayed.
+    ;; I don't have an easy way to know if certain review threads is for the selected commits.
+    (when (and (not .isOutdated) (null pr-review--selected-commits))
       (save-excursion
         (when (pr-review--goto-diff-line
                .path .diffSide .line)
@@ -624,15 +626,17 @@ It will be inserted at the beginning."
 (defun pr-review--insert-commit-section (commits)
   "Insert commit section for a list of COMMITS."
   (magit-insert-section (pr-review--commit-section 'commit-section-id 'hide)
-    (magit-insert-heading (format "%d Commits" (length commits)))
-    (mapc (lambda (commit)
-            (let-alist commit
-              (insert "- "
-                      (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
-                      " "
-                      .commit.messageHeadline
-                      "\n")))
-          commits)))
+    (magit-insert-heading (format "Total %d commits" (length commits)))
+    (dolist (commit commits)
+      (let-alist commit
+        (insert (if (or (null pr-review--selected-commits)
+                        (member .commit.oid pr-review--selected-commits))
+                    "* "
+                  "- "))
+        (insert-button .commit.abbreviatedOid
+                       'face '(pr-review-hash-face pr-review-link-face)
+                       'action (lambda (_) (pr-review-select-commit .commit.abbreviatedOid)))
+        (insert " " .commit.messageHeadline "\n")))))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
   "Insert check section for STATUS-CHECK-ROLLUP and REQUIRED-CONTEXTS."
@@ -835,9 +839,6 @@ it can be displayed in a single line."
         (magit-insert-heading "Description")
         (pr-review--insert-html .bodyHTML))
       (insert "\n")
-      (when .commits.nodes
-        (pr-review--insert-commit-section .commits.nodes)
-        (insert "\n"))
       (when (< .timelineItems.filteredCount .timelineItems.totalCount)
         (insert (propertize (format "Timeline items truncated. Displaying last %d of %d.\n"
                                     .timelineItems.filteredCount .timelineItems.totalCount)
@@ -854,13 +855,19 @@ it can be displayed in a single line."
       (when (or status-check-rollup required-contexts)
         (pr-review--insert-check-section status-check-rollup required-contexts)
         (insert "\n")))
+    (let-alist pr
+      (when .commits.nodes
+        (pr-review--insert-commit-section .commits.nodes)
+        (insert "\n")))
     (magit-insert-section (pr-review--diff-section)
       (magit-insert-heading
         (let-alist pr
-          (format "Files changed (%s files; %s additions, %s deleletions)"
-                  (length .files.nodes)
-                  (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
-                  (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))))
+          (concat (format "Files changed (%s files; %s additions, %s deleletions)"
+                          (length .files.nodes)
+                          (apply #'+ (mapcar (lambda (x) (alist-get 'additions x)) .files.nodes))
+                          (apply #'+ (mapcar (lambda (x) (alist-get 'deletions x)) .files.nodes)))
+                  (when pr-review--selected-commits
+                    (format " - Only viewing selected %d commits" (length pr-review--selected-commits))))))
       (pr-review--insert-diff diff))
     (insert "\n")
     (pr-review--insert-review-action-buttons)

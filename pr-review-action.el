@@ -201,7 +201,8 @@ BODY is the result text user entered."
   (when (buffer-live-p orig-buffer)
     (with-current-buffer orig-buffer
       (pr-review--post-review (alist-get 'id pr-review--pr-info)
-                              (alist-get 'headRefOid pr-review--pr-info)
+                              (or pr-review--selected-commit-head
+                                  (alist-get 'headRefOid pr-review--pr-info))
                               event
                               (nreverse pr-review--pending-review-threads)
                               body)
@@ -566,6 +567,52 @@ Return t if found, nil otherwise."
     (when pos
       (goto-char pos)
       t)))
+
+;; short helper for next function
+(defun pr-review--make-abbrev-oid-to-commit-nodes (commit-nodes)
+  (let* ((abbrev-oid-to-val (make-hash-table :test 'equal)))
+    (dolist (n commit-nodes)
+      (let-alist n
+        (puthash .commit.abbreviatedOid n abbrev-oid-to-val)))
+    abbrev-oid-to-val))
+
+(defun pr-review-select-commit (&optional initial-input)
+  "Interactively select some commits for review, with INITIAL-INPUT."
+  (interactive)
+  (let* ((commit-nodes (let-alist pr-review--pr-info .commits.nodes))
+         (abbrev-oid-to-val (pr-review--make-abbrev-oid-to-commit-nodes commit-nodes))
+         (completion-extra-properties
+          (list :annotation-function (lambda (s) (let-alist (gethash s abbrev-oid-to-val)
+                                                   (concat " " .commit.messageHeadline)))))
+         (abbrev-oids
+          (completing-read-multiple
+           "Select commit (select two for a range, empty to reset): "
+           (mapcar (lambda (n) (let-alist n .commit.abbreviatedOid)) commit-nodes)
+           nil t initial-input))
+         (indices (mapcar (lambda (x) (seq-position
+                                       commit-nodes x (lambda (n xx) (equal (let-alist n .commit.abbreviatedOid) xx))))
+                          abbrev-oids)))
+    (when (seq-contains-p indices nil)
+      (user-error "Invalid commit abbrev-oids"))
+    (setq indices (sort (seq-uniq indices)))
+
+    (if (null indices)
+        (setq pr-review--selected-commits nil
+              pr-review--selected-commit-base nil
+              pr-review--selected-commit-head nil)
+      (unless (length< indices 3)
+        (user-error "Must input 1 commit (to select only the commit) or 2 commits (to select a commit range)"))
+      (setq pr-review--selected-commits
+            (mapcar (lambda (i) (let-alist (nth i commit-nodes) .commit.oid))
+                    (number-sequence (car indices) (car (last indices))))
+            pr-review--selected-commit-head
+            (car (last pr-review--selected-commits))
+            pr-review--selected-commit-base
+            (if (= (car indices) 0)
+                (let-alist pr-review--pr-info .baseRefOid)
+              (let-alist (nth (- (car indices) 1) commit-nodes)
+                .commit.oid)))))
+  (pr-review-refresh))
 
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here

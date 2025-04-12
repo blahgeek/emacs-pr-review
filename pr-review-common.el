@@ -177,6 +177,9 @@
 (defvar-local pr-review--pr-path nil "List of repo-owner, repo-name, pr-id.")
 (defvar-local pr-review--pr-info nil "Result of fetch-pr-info, useful for actions.")
 (defvar-local pr-review--pending-review-threads nil)
+(defvar-local pr-review--selected-commits nil)
+(defvar-local pr-review--selected-commit-base nil)
+(defvar-local pr-review--selected-commit-head nil)
 
 (defcustom pr-review-generated-file-regexp ".*generated/.*"
   "Regexe that match generated files, which would be collapsed in review."

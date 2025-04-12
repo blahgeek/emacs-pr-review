@@ -139,10 +139,10 @@ HEAD-OR-BASE should be \='head or \='base, it determines the version to fetch."
   (let* ((repo-owner (car pr-review--pr-path))
          (repo-name (cadr pr-review--pr-path))
          (url (format "/repos/%s/%s/contents/%s" repo-owner repo-name filepath))
-         (ref (alist-get (pcase head-or-base
-                           ('head 'headRefOid)
-                           ('base 'baseRefOid))
-                         pr-review--pr-info)))
+         (ref (let-alist pr-review--pr-info
+                (pcase head-or-base
+                  ('head (or pr-review--selected-commit-head .headRefOid))
+                  ('base (or pr-review--selected-commit-base .baseRefOid))))))
     (apply #'ghub-request
            "GET" url `((ref . ,ref))
            :headers '(("Accept" . "application/vnd.github.v3.raw"))
