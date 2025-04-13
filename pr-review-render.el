@@ -175,9 +175,13 @@ INDENT is an optional number of extra spaces at the start of the line."
         (when (and (> .reactors.totalCount 0) .content)
           (when s
             (setq s (concat s "  ")))
-          (setq s (concat s (format "%s*%d"
-                                    (alist-get .content pr-review-reaction-emojis .content nil 'equal)
-                                    .reactors.totalCount))))))
+          (setq s (concat
+                   s
+                   (format "%s*%d"
+                           (alist-get .content pr-review-reaction-emojis .content nil 'equal)
+                           .reactors.totalCount)
+                   (when .viewerHasReacted
+                     "#"))))))
     (when s
       (when indent
         (insert (propertize " " 'display `(space :width (,(* indent pr-review--char-pixel-width))))))

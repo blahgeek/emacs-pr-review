@@ -22,6 +22,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
       reactionGroups {
         content
         reactors { totalCount }
+        viewerHasReacted
       }
       author {
         login
@@ -98,6 +99,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
               reactionGroups {
                 content
                 reactors { totalCount }
+                viewerHasReacted
               }
             }
           }
@@ -178,6 +180,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             reactionGroups {
               content
               reactors { totalCount }
+              viewerHasReacted
             }
           }
           ... on PullRequestReview {
@@ -194,6 +197,7 @@ query($repo_owner:String!, $repo_name:String!, $pr_id:Int!) {
             reactionGroups {
               content
               reactors { totalCount }
+              viewerHasReacted
             }
             
             comments(first: 100) {
