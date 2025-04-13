@@ -40,18 +40,6 @@
   :type 'integer
   :group 'pr-review)
 
-(defvar pr-review-reaction-emojis
-  '(("CONFUSED" . "😕")
-    ("EYES" . "👀")
-    ("HEART" . "❤️")
-    ("HOORAY" . "🎉")
-    ("LAUGH" . "😄")
-    ("ROCKET" . "🚀")
-    ("THUMBS_DOWN" . "👎")
-    ("THUMBS_UP" . "👍"))
-  "Alist of github reaction name to emoji unicode.
-See https://docs.github.com/en/graphql/reference/enums#reactioncontent")
-
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (concat
@@ -177,7 +165,7 @@ INDENT is an optional number of extra spaces at the start of the line."
             (setq s (concat s "  ")))
           (setq s (concat
                    s
-                   (format "%s*%d"
+                   (format "%s%d"
                            (alist-get .content pr-review-reaction-emojis .content nil 'equal)
                            .reactors.totalCount)
                    (when .viewerHasReacted
@@ -442,6 +430,7 @@ It will be inserted at the beginning."
                 (oset item-section databaseId .databaseId)
                 (oset item-section updatable .viewerCanUpdate)
                 (oset item-section body .body)
+                (oset item-section reaction-groups .reactionGroups)
                 (magit-insert-heading
                   (make-string (* 2 pr-review-section-indent-width) ?\s)
                   (pr-review--propertize-username .author.login)
@@ -481,6 +470,7 @@ It will be inserted at the beginning."
           (oset section databaseId .databaseId)
           (oset section updatable .viewerCanUpdate)
           (oset section body .body)
+          (oset section reaction-groups .reactionGroups)
           (magit-insert-heading
             (propertize "Reviewed by " 'face 'magit-section-heading)
             (pr-review--propertize-username .author.login)
@@ -504,6 +494,7 @@ It will be inserted at the beginning."
       (oset section databaseId .databaseId)
       (oset section updatable .viewerCanUpdate)
       (oset section body .body)
+      (oset section reaction-groups .reactionGroups)
       (magit-insert-heading
         (propertize "Commented by " 'face 'magit-section-heading)
         (pr-review--propertize-username .author.login)
@@ -869,9 +860,10 @@ it can be displayed in a single line."
       (pr-review--insert-reviewers-info pr)
       (pr-review--insert-assignees-info pr)
       (insert "\n")
-      (magit-insert-section section (pr-review--description-section)
+      (magit-insert-section section (pr-review--description-section .id)
         (oset section body .body)
         (oset section updatable .viewerCanUpdate)
+        (oset section reaction-groups .reactionGroups)
         (magit-insert-heading "Description")
         (pr-review--insert-html .bodyHTML)
         (pr-review--maybe-insert-reactions .reactionGroups))

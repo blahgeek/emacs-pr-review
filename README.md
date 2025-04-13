@@ -91,6 +91,7 @@ Some other keybindings or commands:
 - `C-c C-o`: open this pull request in browser
 - `C-c C-q`: request reviewers
 - `C-c C-l`: set labels
+- `C-c C-j`: set reactions (emojis) for comment or description under current point
 - `C-c C-f`: view current file; invoke with `C-u` prefix to select head or base
 - `C-c C-d`: open current diff; invoke with `C-u` prefix to select file
 - `M-x pr-review-select-commit`: select only some commits for review

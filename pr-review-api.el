@@ -472,5 +472,22 @@ See `pr-review--get-repo-labels-1' for return value."
    `((input . ((labelableId . ,pr-node-id)
                (labelIds . ,(vconcat label-node-ids)))))))
 
+(defun pr-review--update-reactions (subject-id reactions)
+  "Update REACTIONS to SUBJECT-ID.
+REACTIONS is a list of reaction names.
+Those not in the list would be removed."
+  (let ((graphql (mapconcat
+                  (lambda (enum-item)
+                    (if (member (car enum-item) reactions)
+                        (format "_%s: addReaction(input: { content: %s, subjectId: \"%s\" }) {clientMutationId}"
+                                (car enum-item) (car enum-item) subject-id)
+                      (format "_%s: removeReaction(input: { content: %s, subjectId: \"%s\" }) {clientMutationId}"
+                              (car enum-item) (car enum-item) subject-id)))
+                  pr-review-reaction-emojis
+                  "\n")))
+    (pr-review--execute-graphql-raw
+     (concat "mutation { \n" graphql "\n}")
+     nil)))
+
 (provide 'pr-review-api)
 ;;; pr-review-api.el ends here

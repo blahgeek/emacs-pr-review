@@ -614,5 +614,31 @@ Return t if found, nil otherwise."
                 .commit.oid)))))
   (pr-review-refresh))
 
+(defun pr-review-update-reactions ()
+  "Interactively select reactions for comment or description under point."
+  (interactive)
+  (let* ((section (magit-current-section))
+         (all-reaction-names (mapcar (lambda (item) (car item)) pr-review-reaction-emojis))
+         (completion-extra-properties
+          (list :annotation-function
+                (lambda (n) (concat " " (alist-get n pr-review-reaction-emojis "" nil 'equal)))))
+         subject-id current-reaction-groups current-my-reactions)
+    (if (or (pr-review--description-section-p section)
+            (pr-review--review-section-p section)
+            (pr-review--comment-section-p section)
+            (pr-review--review-thread-item-section-p section))
+        (setq subject-id (oref section value)
+              current-reaction-groups (oref section reaction-groups))
+      (user-error "Current point is not reactable"))
+    (dolist (x current-reaction-groups)
+      (when (alist-get 'viewerHasReacted x)
+        (push (alist-get 'content x) current-my-reactions)))
+
+    (pr-review--update-reactions
+     subject-id
+     (completing-read-multiple "Reactions: " all-reaction-names nil t
+                               (concat (string-join current-my-reactions ",") ",")))
+    (pr-review-refresh)))
+
 (provide 'pr-review-action)
 ;;; pr-review-action.el ends here
