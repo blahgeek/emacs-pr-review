@@ -107,6 +107,8 @@ Keybindings in this buffer:
 - `C-c C-k`: Abort, drop the content
 - `C-c @`: Mention some other (inserting `@username`)
 
+Recommend using (company-emoji)[https://github.com/dunn/company-emoji] to insert emojis in PrReviewInput buffer.
+
 ### Keybindings in PrReviewNotification buffer
 
 - `RET`: Open the PR (While this buffer lists all types of notifications, only Pull Requests can be opened by this package)
