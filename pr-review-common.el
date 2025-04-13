@@ -139,6 +139,11 @@
   "Face used for buttons."
   :group 'pr-review)
 
+(defface pr-review-reaction-face
+  '((t :height 0.7 :box t))
+  "Face used for reaction emojis."
+  :group 'pr-review)
+
 
 ;; section classes
 (defclass pr-review--review-section (magit-section)

@@ -40,6 +40,18 @@
   :type 'integer
   :group 'pr-review)
 
+(defvar pr-review-reaction-emojis
+  '(("CONFUSED" . "😕")
+    ("EYES" . "👀")
+    ("HEART" . "❤️")
+    ("HOORAY" . "🎉")
+    ("LAUGH" . "😄")
+    ("ROCKET" . "🚀")
+    ("THUMBS_DOWN" . "👎")
+    ("THUMBS_UP" . "👍"))
+  "Alist of github reaction name to emoji unicode.
+See https://docs.github.com/en/graphql/reference/enums#reactioncontent")
+
 (defun pr-review--format-timestamp (str)
   "Convert and format timestamp STR from json."
   (concat
@@ -153,6 +165,23 @@ in addition to other faces."
     ;; additional face for the inserted region
     (when extra-face
       (add-face-text-property start end extra-face))))
+
+(defun pr-review--maybe-insert-reactions (reaction-group &optional indent)
+  "Insert REACTION-GROUP if not nil.
+INDENT is an optional number of extra spaces at the start of the line."
+  (let (s)
+    (dolist (group reaction-group)
+      (let-alist group
+        (when (and (> .reactors.totalCount 0) .content)
+          (when s
+            (setq s (concat s "  ")))
+          (setq s (concat s (format "%s*%d"
+                                    (alist-get .content pr-review-reaction-emojis .content nil 'equal)
+                                    .reactors.totalCount))))))
+    (when s
+      (when indent
+        (insert (propertize " " 'display `(space :width (,(* indent pr-review--char-pixel-width))))))
+      (insert (propertize s 'face 'pr-review-reaction-face) "\n"))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
   "Fontify content BODY as LANG-MODE, return propertized string.
@@ -416,6 +445,7 @@ It will be inserted at the beginning."
                   (pr-review--format-timestamp .createdAt))
                 (pr-review--insert-html .bodyHTML (* 2 pr-review-section-indent-width)
                                         'pr-review-thread-comment-face)
+                (pr-review--maybe-insert-reactions .reactionGroups (* 2 pr-review-section-indent-width))
                 (insert "\n"))))
           (let-alist review-thread .comments.nodes))
 
@@ -456,6 +486,7 @@ It will be inserted at the beginning."
             (pr-review--format-timestamp .createdAt))
           (unless (string-empty-p .body)
             (pr-review--insert-html .bodyHTML))
+          (pr-review--maybe-insert-reactions .reactionGroups)
           (insert "\n")
           (dolist (top-comment-and-review-thread top-comment-and-review-thread-list)
             (apply #'pr-review--insert-review-thread-section top-comment-and-review-thread))
@@ -475,6 +506,7 @@ It will be inserted at the beginning."
         " - "
         (pr-review--format-timestamp .createdAt))
       (pr-review--insert-html .bodyHTML)
+      (pr-review--maybe-insert-reactions .reactionGroups)
       (insert "\n"))))
 
 (defun pr-review--insert-misc-event-section (event)
@@ -837,7 +869,8 @@ it can be displayed in a single line."
         (oset section body .body)
         (oset section updatable .viewerCanUpdate)
         (magit-insert-heading "Description")
-        (pr-review--insert-html .bodyHTML))
+        (pr-review--insert-html .bodyHTML)
+        (pr-review--maybe-insert-reactions .reactionGroups))
       (insert "\n")
       (when (< .timelineItems.filteredCount .timelineItems.totalCount)
         (insert (propertize (format "Timeline items truncated. Displaying last %d of %d.\n"
