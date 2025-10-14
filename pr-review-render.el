@@ -120,6 +120,24 @@
              (t
               (shr-generic td)))))))))
 
+(defun pr-review--restore-diff-syntax-overlays ()
+  "Restore diff syntax highlighting overlays with high priority.
+This ensures diff syntax highlighting overlays override section highlight overlays."
+  (remove-overlays (point-min) (point-max) 'pr-review-diff-syntax t)
+  (let ((pos (point-min)))
+    (while (< pos (point-max))
+      (when-let ((face (get-text-property pos 'pr-review-diff-syntax-face)))
+        (let* ((end (or (next-single-property-change pos 'pr-review-diff-syntax-face nil (point-max))
+                       (point-max)))
+               (ov (make-overlay pos end)))
+          (overlay-put ov 'pr-review-diff-syntax t)
+          (overlay-put ov 'font-lock-face face)
+          (overlay-put ov 'priority 1)  ; Higher than magit-section-highlight (priority 0)
+          (overlay-put ov 'evaporate t)
+          (setq pos end)))
+      (setq pos (or (next-single-property-change pos 'pr-review-diff-syntax-face nil (point-max))
+                    (point-max))))))
+
 (defun pr-review--insert-html (body &optional indent extra-face)
   "Insert html content BODY.
 INDENT is an optional number, if provided,
@@ -213,9 +231,14 @@ MARGIN count of spaces are added at the start of every line."
         (dolist (ol (overlays-in (point-min) (point-max)))
           (when (eq (overlay-get ol 'diff-mode) 'syntax)
             (when-let ((face (overlay-get ol 'face)))
-              (add-face-text-property (overlay-start ol)
-                                      (overlay-end ol)
-                                      face))))
+              ;; Store syntax face info for later high-priority overlay recreation
+              (put-text-property (overlay-start ol)
+                                 (overlay-end ol)
+                                 'pr-review-diff-syntax-face face)
+              ;; Also set font-lock-face for Magit v4.4.0+ compatibility
+              (put-text-property (overlay-start ol)
+                                 (overlay-end ol)
+                                 'font-lock-face face))))
         (goto-char (point-min))
         (remove-overlays (point-min) (point-max) 'diff-mode 'syntax)))
 
@@ -961,6 +984,10 @@ it can be displayed in a single line."
         (propertize (alist-get 'title pr)'font-lock-face 'pr-review-title-face)))
     (insert "\n")
     (pr-review--insert-pr-body pr diff))
+  ;; Create high-priority overlays for diff syntax highlighting
+  (pr-review--restore-diff-syntax-overlays)
+  ;; Add hook to restore overlays after section highlighting
+  (add-hook 'post-command-hook #'pr-review--restore-diff-syntax-overlays nil t)
   ;; need to call after this inserting all sections
   (pr-review--hide-generated-files))
 
