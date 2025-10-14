@@ -49,21 +49,21 @@
   "Convert and format timestamp STR from json."
   (concat
    (propertize (format-time-string "%b %d, %Y, %H:%M" (date-to-time str))
-               'face 'pr-review-timestamp-face)
+               'font-lock-face 'pr-review-timestamp-face)
    (when (and pr-review--last-read-time (string> str pr-review--last-read-time))
      (concat " " (propertize "UNREAD"
-                             'face 'pr-review-state-face
+                             'font-lock-face 'pr-review-state-face
                              'pr-review-unread t)))))
 
 (defun pr-review--propertize-username (username)
   "Format and propertize USERNAME."
-  (propertize (concat "@" username) 'face 'pr-review-author-face))
+  (propertize (concat "@" username) 'font-lock-face 'pr-review-author-face))
 
 (defun pr-review--propertize-keyword (str)
   "Propertize keyword STR with optional face."
   (let* ((trim-pattern "[][ \t\n\r]+")
          (trimmed-str (string-trim str trim-pattern trim-pattern)))
-    (propertize str 'face
+    (propertize str 'font-lock-face
                 (cond
                  ((member trimmed-str '("MERGED" "SUCCESS" "COMPLETED" "APPROVED" "REJECTED"))
                   'pr-review-success-state-face)
@@ -76,12 +76,12 @@
 
 (defun pr-review--insert-link (title url)
   "Insert a link URL with TITLE."
-  (insert-button title 'face 'pr-review-link-face
+  (insert-button title 'font-lock-face 'pr-review-link-face
                  'action (lambda (_) (browse-url url))))
 
 (defun pr-review--make-link (title url)
   "Make a link (as string) of URL with TITLE."
-  (button-buttonize (propertize title 'face 'pr-review-link-face)
+  (button-buttonize (propertize title 'font-lock-face 'pr-review-link-face)
                     (lambda (_) (browse-url url))))
 
 (defun pr-review--dom-string (dom)
@@ -110,13 +110,13 @@
                 (shr-insert "-"))
               (insert (propertize (concat (pr-review--dom-string td)
                                           "\n")
-                                  'face 'diff-removed)))
+                                  'font-lock-face 'diff-removed)))
              ((member "blob-code-addition" classes)
               (let ((shr-current-font 'diff-indicator-added))
                 (shr-insert "+"))
               (insert (propertize (concat (pr-review--dom-string td)
                                           "\n")
-                                  'face 'diff-added)))
+                                  'font-lock-face 'diff-added)))
              (t
               (shr-generic td)))))))))
 
@@ -178,7 +178,7 @@ INDENT is an optional number of extra spaces at the start of the line."
     (when s
       (when indent
         (insert (propertize " " 'display `(space :width (,(* indent pr-review--char-pixel-width))))))
-      (insert (propertize s 'face 'pr-review-reaction-face) "\n"))))
+      (insert (propertize s 'font-lock-face 'pr-review-reaction-face) "\n"))))
 
 (defun pr-review--fontify (body lang-mode &optional margin)
   "Fontify content BODY as LANG-MODE, return propertized string.
@@ -239,7 +239,7 @@ MARGIN count of spaces are added at the start of every line."
     (setq-local pr-review--diff-begin-point beg)
 
     (if (not diff)
-        (insert (propertize "Diff not available\n" 'face 'pr-review-error-state-face))
+        (insert (propertize "Diff not available\n" 'font-lock-face 'pr-review-error-state-face))
       (pr-review--insert-fontified diff 'diff-mode)
       (goto-char beg)
       (magit-wash-sequence (apply-partially #'magit-diff-wash-diff '())))
@@ -354,7 +354,7 @@ It will be inserted at the beginning."
                                      (format "%s:%s to %s:%s" .startSide .startLine .side .line)
                                    (format "%s:%s" .side .line))
                                  "\n")
-                         'face 'pr-review-in-diff-pending-begin-face
+                         'font-lock-face 'pr-review-in-diff-pending-begin-face
                          (when pr-review-fringe-icons
                            (list 'line-prefix
                                  (propertize " " 'display '(left-fringe
@@ -362,7 +362,7 @@ It will be inserted at the beginning."
                                                             pr-review-fringe-comment-pending))))))
           (pr-review--insert-fontified .body 'gfm-mode nil
                                        'pr-review-in-diff-pending-body-face)
-          (insert (propertize " \n" 'face 'pr-review-in-diff-pending-end-face))
+          (insert (propertize " \n" 'font-lock-face 'pr-review-in-diff-pending-end-face))
           (setq end (point))))
       (when beg
         (add-text-properties
@@ -391,7 +391,7 @@ It will be inserted at the beginning."
                      ", ")
                     (when .isResolved " - RESOLVED")
                     "  ")
-            'face 'pr-review-in-diff-thread-title-face
+            'font-lock-face 'pr-review-in-diff-thread-title-face
             'pr-review-eldoc-content (let-alist (car .comments.nodes)
                                        (concat (pr-review--propertize-username .author.login)
                                                ": " .body))
@@ -403,12 +403,12 @@ It will be inserted at the beginning."
                                                              pr-review-fringe-comment-open)))))))
           (insert-button
            "Go to thread"
-           'face 'pr-review-button-face
+           'font-lock-face 'pr-review-button-face
            'action (lambda (_)
                      (push-mark)
                      (pr-review--goto-section-with-value .id)
                      (recenter)))
-          (insert (propertize "\n" 'face 'pr-review-in-diff-thread-title-face)))))))
+          (insert (propertize "\n" 'font-lock-face 'pr-review-in-diff-thread-title-face)))))))
 
 (defun pr-review--insert-in-diff-checkrun-annotation (annotation)
   "Insert CheckRun ANNOTATION inside the diff section."
@@ -418,9 +418,9 @@ It will be inserted at the beginning."
         (forward-line)
         (insert
          (concat
-          (propertize "> " 'face 'pr-review-in-diff-thread-title-face)
+          (propertize "> " 'font-lock-face 'pr-review-in-diff-thread-title-face)
           (pr-review--propertize-keyword (format "[%s]" .annotationLevel))
-          (propertize (format " %s: %s" .title .message) 'face 'pr-review-in-diff-thread-title-face)
+          (propertize (format " %s: %s" .title .message) 'font-lock-face 'pr-review-in-diff-thread-title-face)
           "\n")
          )))))
 
@@ -439,14 +439,14 @@ It will be inserted at the beginning."
           .path (when .line (if .startLine
                                 (format ":%s-%s" .startLine .line)
                               (format ":%s" .line))))
-         'face 'pr-review-thread-item-title-face)
+         'font-lock-face 'pr-review-thread-item-title-face)
         (when (eq t .isResolved)
-          (concat " - " (propertize "RESOLVED" 'face 'pr-review-info-state-face)))
+          (concat " - " (propertize "RESOLVED" 'font-lock-face 'pr-review-info-state-face)))
         (when (eq t .isOutdated)
-          (concat " - " (propertize "OUTDATED" 'face 'pr-review-info-state-face)))))
+          (concat " - " (propertize "OUTDATED" 'font-lock-face 'pr-review-info-state-face)))))
     (insert
      (make-string pr-review-section-indent-width ?\s)
-     (propertize " \n" 'face 'pr-review-thread-diff-begin-face))
+     (propertize " \n" 'font-lock-face 'pr-review-thread-diff-begin-face))
     (let ((diffhunk-lines (split-string (alist-get 'diffHunk top-comment) "\n"))
           beg end)
       (setq beg (point))
@@ -458,14 +458,14 @@ It will be inserted at the beginning."
                                    'pr-review-thread-diff-body-face)
       (setq end (point))
       (make-button beg end
-                   'face nil
+                   'font-lock-face nil
                    'help-echo "Click to go to the line in diff."
                    'action (lambda (_)
                              (push-mark)
                              (let-alist review-thread
                                (pr-review--goto-diff-line .path .diffSide .line)
                                (recenter)))))
-    (insert (propertize " \n" 'face 'pr-review-thread-diff-end-face))
+    (insert (propertize " \n" 'font-lock-face 'pr-review-thread-diff-end-face))
     (mapc (lambda (cmt)
             (let-alist cmt
               (magit-insert-section item-section (pr-review--review-thread-item-section .id)
@@ -486,12 +486,12 @@ It will be inserted at the beginning."
 
     (insert (make-string (* 2 pr-review-section-indent-width) ?\s))
     (insert-button "Reply to thread"
-                   'face 'pr-review-button-face
+                   'font-lock-face 'pr-review-button-face
                    'action 'pr-review-reply-to-thread)
     (insert "  ")
     (let ((resolved (eq t (alist-get 'isResolved review-thread))))
       (insert-button (if resolved "Unresolve" "Resolve")
-                     'face 'pr-review-button-face
+                     'font-lock-face 'pr-review-button-face
                      'action 'pr-review-resolve-thread))
     (insert "\n\n")))
 
@@ -514,7 +514,7 @@ It will be inserted at the beginning."
           (oset section body .body)
           (oset section reaction-groups .reactionGroups)
           (magit-insert-heading
-            (propertize "Reviewed by " 'face 'magit-section-heading)
+            (propertize "Reviewed by " 'font-lock-face 'magit-section-heading)
             (pr-review--propertize-username .author.login)
             " - "
             (pr-review--propertize-keyword .state)
@@ -538,7 +538,7 @@ It will be inserted at the beginning."
       (oset section body .body)
       (oset section reaction-groups .reactionGroups)
       (magit-insert-heading
-        (propertize "Commented by " 'face 'magit-section-heading)
+        (propertize "Commented by " 'font-lock-face 'magit-section-heading)
         (pr-review--propertize-username .author.login)
         " - "
         (pr-review--format-timestamp .createdAt))
@@ -551,87 +551,87 @@ It will be inserted at the beginning."
   (let-alist event
     (magit-insert-section (pr-review--event-section .id 'hide)
       (magit-insert-heading
-        (propertize "* " 'face 'magit-section-heading)
+        (propertize "* " 'font-lock-face 'magit-section-heading)
         (apply #'concat
                (pcase .__typename
                  ("AssignedEvent"
                   (list
-                   (propertize "Assigned to " 'face 'magit-section-heading)
+                   (propertize "Assigned to " 'font-lock-face 'magit-section-heading)
                    (mapconcat (lambda (item)
                                 (let-alist item
                                   (pr-review--propertize-username .assignee.login)))
                               .groupedItems ", ")
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("UnassignedEvent"
                   (list
-                   (propertize "Unassigned to " 'face 'magit-section-heading)
+                   (propertize "Unassigned to " 'font-lock-face 'magit-section-heading)
                    (mapconcat (lambda (item)
                                 (let-alist item
                                   (pr-review--propertize-username .assignee.login)))
                               .groupedItems ", ")
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ReviewRequestedEvent"
                   (list
-                   (propertize "Requested review from " 'face 'magit-section-heading)
+                   (propertize "Requested review from " 'font-lock-face 'magit-section-heading)
                    (mapconcat (lambda (item)
                                 (let-alist item
                                   (pr-review--propertize-username .requestedReviewer.login)))
                               .groupedItems ", ")
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ReviewRequestRemovedEvent"
                   (list
-                   (propertize "Removed review request from " 'face 'magit-section-heading)
+                   (propertize "Removed review request from " 'font-lock-face 'magit-section-heading)
                    (mapconcat (lambda (item)
                                 (let-alist item
                                   (pr-review--propertize-username .requestedReviewer.login)))
                               .groupedItems ", ")
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("MergedEvent"
                   (list
-                   (propertize "Merged" 'face 'pr-review-success-state-face)
-                   (propertize " into " 'face 'magit-section-heading)
-                   (propertize .mergeRefName 'face 'pr-review-branch-face)
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize "Merged" 'font-lock-face 'pr-review-success-state-face)
+                   (propertize " into " 'font-lock-face 'magit-section-heading)
+                   (propertize .mergeRefName 'font-lock-face 'pr-review-branch-face)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ClosedEvent"
                   (list
-                   (propertize "Closed" 'face 'pr-review-error-state-face)
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize "Closed" 'font-lock-face 'pr-review-error-state-face)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("ReopenedEvent"
                   (list
-                   (propertize "Reopened" 'face 'pr-review-success-state-face)
-                   (propertize " by " 'face 'magit-section-heading)
+                   (propertize "Reopened" 'font-lock-face 'pr-review-success-state-face)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)))
                  ("PullRequestCommit"
                   (list
                    (propertize (format "Pushed %d commits" (length .groupedItems))
-                               'face 'magit-section-heading)))
+                               'font-lock-face 'magit-section-heading)))
                  ("HeadRefForcePushedEvent"
                   (list
                    (propertize (format "Force pushed %d times" (length .groupedItems))
-                               'face 'magit-section-heading)
-                   (propertize " by " 'face 'magit-section-heading)
+                               'font-lock-face 'magit-section-heading)
+                   (propertize " by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)
                    " - "
                    (propertize
                     (let-alist (car .groupedItems)
                       (or .beforeCommit.abbreviatedOid "?"))
-                    'face 'pr-review-hash-face)
+                    'font-lock-face 'pr-review-hash-face)
                    " -> "
                    (propertize
                     (let-alist (car (last .groupedItems))
                       (or .afterCommit.abbreviatedOid "?"))
-                    'face 'pr-review-hash-face)))
+                    'font-lock-face 'pr-review-hash-face)))
                  ("CrossReferencedEvent"
                   (list
-                   (propertize "Mentioned by " 'face 'magit-section-heading)
+                   (propertize "Mentioned by " 'font-lock-face 'magit-section-heading)
                    (pr-review--propertize-username .actor.login)
-                   (propertize " in " 'face 'magit-section-heading)
+                   (propertize " in " 'font-lock-face 'magit-section-heading)
                    (pr-review--make-link .source.title .source.url)))))
         (when .createdAt
           (concat
@@ -643,7 +643,7 @@ It will be inserted at the beginning."
          (dolist (commit .groupedItems)
            (let-alist commit
              (insert "- "
-                     (propertize .commit.abbreviatedOid 'face 'pr-review-hash-face)
+                     (propertize .commit.abbreviatedOid 'font-lock-face 'pr-review-hash-face)
                      " "
                      .commit.messageHeadline
                      "\n"))))))
@@ -669,7 +669,7 @@ It will be inserted at the beginning."
                  (insert " ")
                  (insert-button
                   "Request Review"
-                  'face 'pr-review-button-face
+                  'font-lock-face 'pr-review-button-face
                   'action (lambda (_) (call-interactively #'pr-review-request-reviews))))
                (insert "\n"))
              groups)))
@@ -689,7 +689,7 @@ It will be inserted at the beginning."
   (let-alist pr-info
     (when .viewerCanSubscribe
       (insert-button .viewerSubscription
-                     'face 'pr-review-button-face
+                     'font-lock-face 'pr-review-button-face
                      'action (lambda (_) (call-interactively #'pr-review-update-subscription))))))
 
 (defun pr-review--insert-commit-section (commits)
@@ -703,14 +703,14 @@ It will be inserted at the beginning."
                     "* "
                   "- "))
         (insert-button .commit.abbreviatedOid
-                       'face '(pr-review-hash-face pr-review-link-face)
+                       'font-lock-face '(pr-review-hash-face pr-review-link-face)
                        'action (lambda (_) (pr-review-select-commit .commit.abbreviatedOid)))
         (insert " " .commit.messageHeadline "\n")))))
 
 (defun pr-review--insert-check-section (status-check-rollup required-contexts)
   "Insert check section for STATUS-CHECK-ROLLUP and REQUIRED-CONTEXTS."
   (magit-insert-section (pr-review--check-section 'check-section-id)
-    (magit-insert-heading (concat (propertize "Check status - " 'face 'magit-section-heading)
+    (magit-insert-heading (concat (propertize "Check status - " 'font-lock-face 'magit-section-heading)
                                   (pr-review--propertize-keyword
                                    (or (alist-get 'state status-check-rollup) "UNKNOWN"))))
     ;; for REQUIRED: show "*" instead of "-"
@@ -721,9 +721,9 @@ It will be inserted at the beginning."
       (mapc (lambda (required-context)
               (unless (member required-context valid-context-or-names)
                 (insert required-item-bullet-point
-                        (propertize required-context 'face 'pr-review-check-face)
+                        (propertize required-context 'font-lock-face 'pr-review-check-face)
                         ": "
-                        (propertize "EXPECTED" 'face 'pr-review-error-state-face)
+                        (propertize "EXPECTED" 'font-lock-face 'pr-review-error-state-face)
                         "\n")))
             required-contexts)
       (mapc (lambda (node)
@@ -733,7 +733,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .name required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .name 'face 'pr-review-check-face)
+                                   (propertize .name 'font-lock-face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .status)
                                    (when .conclusion
@@ -746,7 +746,7 @@ It will be inserted at the beginning."
                    (insert (concat (if (member .context required-contexts)
                                        required-item-bullet-point
                                      "- ")
-                                   (propertize .context 'face 'pr-review-check-face)
+                                   (propertize .context 'font-lock-face 'pr-review-check-face)
                                    ": "
                                    (pr-review--propertize-keyword .state)
                                    (when .description
@@ -792,7 +792,7 @@ It will be inserted at the beginning."
        "  "
        (mapconcat (lambda (label)
                     (propertize (alist-get 'name label)
-                                'face
+                                'font-lock-face
                                 `(:background ,(concat "#" (alist-get 'color label))
                                               :foreground ,(pr-review--get-label-foreground (alist-get 'color label))
                                               :inherit pr-review-label-face)))
@@ -800,7 +800,7 @@ It will be inserted at the beginning."
     (insert "  ")
     (insert-button
      "Edit Labels"
-     'face 'pr-review-button-face
+     'font-lock-face 'pr-review-button-face
      'action (lambda (_) (call-interactively #'pr-review-set-labels)))))
 
 (defun pr-review--insert-review-action-buttons ()
@@ -808,10 +808,10 @@ It will be inserted at the beginning."
   (insert "Submit review with action:")
   (dolist (event pr-review--review-actions)
     (insert " ")
-    (insert-button event 'face 'pr-review-button-face
+    (insert-button event 'font-lock-face 'pr-review-button-face
                    'action (lambda (_) (pr-review-submit-review event))))
   (insert ", or ")
-  (insert-button "COMMENT ONLY" 'face 'pr-review-button-face
+  (insert-button "COMMENT ONLY" 'font-lock-face 'pr-review-button-face
                  'action (lambda (_) (pr-review-comment)))
   (insert "\n"))
 
@@ -820,12 +820,12 @@ It will be inserted at the beginning."
   (insert "Merge pull request with method:")
   (dolist (method pr-review--merge-methods)
     (insert " ")
-    (insert-button method 'face 'pr-review-button-face
+    (insert-button method 'font-lock-face 'pr-review-button-face
                    'action (lambda (_) (pr-review-merge method))))
   (when-let ((close-or-reopen-action (pr-review--close-or-reopen-action)))
     (insert ", or ")
     (insert-button (upcase (symbol-name close-or-reopen-action))
-                   'face 'pr-review-button-face
+                   'font-lock-face 'pr-review-button-face
                    'action (lambda (_) (pr-review-close-or-reopen))))
   (insert "\n"))
 
@@ -883,9 +883,9 @@ it can be displayed in a single line."
     (let-alist pr
       (pr-review--insert-link .url .url)
       (insert "\n"
-              (propertize .baseRefName 'face 'pr-review-branch-face)
+              (propertize .baseRefName 'font-lock-face 'pr-review-branch-face)
               " <- "
-              (propertize .headRefName 'face 'pr-review-branch-face))
+              (propertize .headRefName 'font-lock-face 'pr-review-branch-face))
       (pr-review--insert-labels-info pr)
       (insert "\n")
       (insert (pr-review--propertize-keyword .state)
@@ -893,7 +893,7 @@ it can be displayed in a single line."
                   (concat " - " (pr-review--propertize-keyword .mergeable))
                 "")
               " - "
-              (propertize (concat "@" .author.login) 'face 'pr-review-author-face)
+              (propertize (concat "@" .author.login) 'font-lock-face 'pr-review-author-face)
               " - "
               (pr-review--format-timestamp .createdAt)
               " - ")
@@ -913,7 +913,7 @@ it can be displayed in a single line."
       (when (< .timelineItems.filteredCount .timelineItems.totalCount)
         (insert (propertize (format "Timeline items truncated. Displaying last %d of %d.\n"
                                     .timelineItems.filteredCount .timelineItems.totalCount)
-                            'face 'pr-review-error-state-face))))
+                            'font-lock-face 'pr-review-error-state-face))))
     (dolist (timeline-item timeline-items)
       (pcase (alist-get '__typename timeline-item)
         ("PullRequestReview"
@@ -958,7 +958,7 @@ it can be displayed in a single line."
       (oset section title .title)
       (oset section updatable .viewerCanUpdate)
       (magit-insert-heading
-        (propertize (alist-get 'title pr)'face 'pr-review-title-face)))
+        (propertize (alist-get 'title pr)'font-lock-face 'pr-review-title-face)))
     (insert "\n")
     (pr-review--insert-pr-body pr diff))
   ;; need to call after this inserting all sections
