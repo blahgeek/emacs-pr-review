@@ -127,6 +127,7 @@ Which means that all sections are collapsed."
   :group 'pr-review
   (pr-review--mode-map-setup-for-evil)
   (use-local-map pr-review-mode-map)
+  (setq-local font-lock-defaults nil)  ;; https://github.com/magit/magit/commit/7de0f1335f8c4954d6d07413c5ec19fc8200078c
   (setq-local magit-hunk-section-map nil
               magit-file-section-map nil
               magit-diff-highlight-hunk-body nil)
@@ -167,6 +168,7 @@ Which means that all sections are collapsed."
     (if section-id
         (pr-review--goto-section-with-value section-id)
       (goto-char (point-min)))
+    (magit-map-sections 'magit-section-maybe-update-visibility-indicator)
     (apply #'message "PR %s/%s/%s loaded" pr-review--pr-path)))
 
 (defun pr-review-refresh (&optional clear-pending-reviews)
