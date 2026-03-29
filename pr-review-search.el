@@ -62,12 +62,12 @@
         (unless (equal login my-login)
           (push login commenters))))
     (concat (let-alist entry
-              (concat (propertize (downcase .state) 'face 'pr-review-listview-status-face) " "))
+              (concat (propertize (downcase .state) 'font-lock-face 'pr-review-listview-status-face) " "))
             (when assigned
-              (propertize "assigned " 'face 'pr-review-listview-status-face))
-            (when review-requested (propertize "review_requested " 'face 'pr-review-listview-status-face))
+              (propertize "assigned " 'font-lock-face 'pr-review-listview-status-face))
+            (when review-requested (propertize "review_requested " 'font-lock-face 'pr-review-listview-status-face))
             (when commenters
-              (mapconcat (lambda (s) (propertize (format "%s " s) 'face 'pr-review-listview-unimportant-activity-face))
+              (mapconcat (lambda (s) (propertize (format "%s " s) 'font-lock-face 'pr-review-listview-unimportant-activity-face))
                          (delete-dups (reverse commenters)) ""))
             )))
 
@@ -88,7 +88,7 @@
                         (unless (equal (length all-items) (length items))
                           (format "(%d non-PRs not displayed) " (- (length all-items) (length items))))
                         (propertize (format "Query: %s" pr-review--search-query)
-                                    'face 'font-lock-comment-face)))
+                                    'font-lock-face 'font-lock-comment-face)))
     (setq-local tabulated-list-entries
                 (mapcar (lambda (item)
                           (let-alist item

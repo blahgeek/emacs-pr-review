@@ -196,16 +196,16 @@ Confirm if there's mark entries."
                                                 (reverse all-participants))))
     (concat (let-alist entry
               (when (and .pr-info.state (not (equal .pr-info.state "OPEN")))
-                (concat (propertize (downcase .pr-info.state) 'face 'pr-review-listview-status-face) " ")))
-            (when me-mentioned (propertize "+mentioned " 'face 'pr-review-listview-important-activity-face))
+                (concat (propertize (downcase .pr-info.state) 'font-lock-face 'pr-review-listview-status-face) " ")))
+            (when me-mentioned (propertize "+mentioned " 'font-lock-face 'pr-review-listview-important-activity-face))
             (pcase me-assigned
-              ('new (propertize "+assigned " 'face 'pr-review-listview-important-activity-face))
-              ('t (propertize "assigned " 'face 'pr-review-listview-status-face)))
+              ('new (propertize "+assigned " 'font-lock-face 'pr-review-listview-important-activity-face))
+              ('t (propertize "assigned " 'font-lock-face 'pr-review-listview-status-face)))
             (pcase me-review-requested
-             ('new (propertize "+review_requested " 'face 'pr-review-listview-important-activity-face))
-             ('t (propertize "review_requested " 'face 'pr-review-listview-status-face)))
+             ('new (propertize "+review_requested " 'font-lock-face 'pr-review-listview-important-activity-face))
+             ('t (propertize "review_requested " 'font-lock-face 'pr-review-listview-status-face)))
             (when me-approved
-              (propertize "approved " 'face 'pr-review-listview-status-face))
+              (propertize "approved " 'font-lock-face 'pr-review-listview-status-face))
             (when all-participants
               (mapconcat
                (lambda (x)
