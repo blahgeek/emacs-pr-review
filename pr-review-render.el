@@ -865,6 +865,13 @@ COMMITS is a list of (abbrev-sha full-sha title)"
     (insert-button (upcase (symbol-name close-or-reopen-action))
                    'face 'pr-review-button-face
                    'action (lambda (_) (pr-review-close-or-reopen))))
+  (when (equal (alist-get 'state pr-review--pr-info) "OPEN")
+    (insert ", or ")
+    (insert-button (if (eq t (alist-get 'isDraft pr-review--pr-info))
+                       "MARK READY FOR REVIEW"
+                     "CONVERT TO DRAFT")
+                   'face 'pr-review-button-face
+                   'action (lambda (_) (pr-review-toggle-draft))))
   (insert "\n"))
 
 (defun pr-review--is-timeline-items-groupable (item-a item-b)
@@ -996,7 +1003,10 @@ it can be displayed in a single line."
       (oset section title .title)
       (oset section updatable .viewerCanUpdate)
       (magit-insert-heading
-        (propertize (alist-get 'title pr) 'face 'pr-review-title-face)))
+        (propertize (alist-get 'title pr) 'face 'pr-review-title-face)
+        (when (eq t .isDraft)
+          (concat " " (propertize "[DRAFT]"
+                                  'face 'pr-review-info-state-face)))))
     (insert "\n")
     (pr-review--insert-pr-body pr diff)))
 

@@ -58,6 +58,7 @@
     (define-key map (kbd "C-c C-q") #'pr-review-request-reviews)
     (define-key map (kbd "C-c C-l") #'pr-review-set-labels)
     (define-key map (kbd "C-c C-j") #'pr-review-update-reactions)
+    (define-key map (kbd "C-c C-t") #'pr-review-toggle-draft)
     map))
 
 (defvar pr-review--mode-map-setup-for-evil-done nil)

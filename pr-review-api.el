@@ -279,6 +279,18 @@ BODY: review comment body."
    'reopen-pr
    `((input . ((pullRequestId . ,pr-node-id))))))
 
+(defun pr-review--post-mark-ready-for-review (pr-node-id)
+  "Send API request to mark pr PR-NODE-ID as ready for review."
+  (pr-review--execute-graphql
+   'mark-pr-ready-for-review
+   `((input . ((pullRequestId . ,pr-node-id))))))
+
+(defun pr-review--post-convert-to-draft (pr-node-id)
+  "Send API request to convert pr PR-NODE-ID back to a draft."
+  (pr-review--execute-graphql
+   'convert-pr-to-draft
+   `((input . ((pullRequestId . ,pr-node-id))))))
+
 (defun pr-review--search-prs (query)
   "Search pull requests with QUERY."
   (let-alist (pr-review--execute-graphql

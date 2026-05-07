@@ -271,15 +271,33 @@ Will confirm before sending the request."
     (_
      (error "Cannot close or reopen PR in current state"))))
 
+(defun pr-review-toggle-draft ()
+  "Toggle the draft state of the current PR.
+If the PR is a draft, mark it ready for review.
+Otherwise, convert it back to a draft.
+Will confirm before sending the request."
+  (interactive)
+  (unless (equal (alist-get 'state pr-review--pr-info) "OPEN")
+    (user-error "Cannot toggle draft state on a PR that is not open"))
+  (let ((id (alist-get 'id pr-review--pr-info))
+        (is-draft (eq t (alist-get 'isDraft pr-review--pr-info))))
+    (if is-draft
+        (when (y-or-n-p "Mark this PR as ready for review? ")
+          (pr-review--post-mark-ready-for-review id)
+          (pr-review-refresh))
+      (when (y-or-n-p "Convert this PR back to a draft? ")
+        (pr-review--post-convert-to-draft id)
+        (pr-review-refresh)))))
+
 (cl-defmethod pr-review-general-interactive-action ()
   "Close or re-open or merge, prompt to interactive select the action."
   (let ((action (let ((actions pr-review--merge-methods))
-                       (when-let ((close-or-reopen-action (pr-review--close-or-reopen-action)))
-                         (setq actions
-                               (append actions
-                                       (list (upcase (symbol-name close-or-reopen-action))))))
-                       (completing-read "Select action: "
-                                        actions nil 'require-match))))
+                  (when-let ((close-or-reopen-action (pr-review--close-or-reopen-action)))
+                    (setq actions
+                          (append actions
+                                  (list (upcase (symbol-name close-or-reopen-action))))))
+                  (completing-read "Select action: "
+                                   actions nil 'require-match))))
     (if (member action pr-review--merge-methods)
         (pr-review-merge action)
       (pr-review-close-or-reopen))))
