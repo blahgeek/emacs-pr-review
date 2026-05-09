@@ -266,9 +266,11 @@ Confirm if there's mark entries."
 HOST is the forge host (a key in `pr-review-forges-alist') to use.
 When called interactively with prefix arg, prompt to select a forge.
 Otherwise, the first entry in `pr-review-forges-alist' is used."
-  (interactive (list (completing-read "Select forge: "
-                                      (mapcar #'car pr-review-forges-alist)
-                                      nil t)))
+  (interactive (list (if (length= pr-review-forges-alist 1)
+                         (caar pr-review-forges-alist)
+                       (completing-read "Select forge: "
+                                        (mapcar #'car pr-review-forges-alist)
+                                        nil t))))
   (let* ((host (or host (caar pr-review-forges-alist)))
          (forge (nth 0 (alist-get host pr-review-forges-alist nil nil 'equal))))
     (with-current-buffer (get-buffer-create (format "*pr-review notifications [%s]*" host))

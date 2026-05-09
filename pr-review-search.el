@@ -46,7 +46,7 @@
 (defun pr-review--search-open-item (item)
   "Open the selected ITEM."
   (let-alist item
-    (pr-review-open .repository.owner.login .repository.name .number)))
+    (pr-review-open pr-review--host .repository.owner.login .repository.name .number)))
 
 (defun pr-review--search-format-status (entry)
   "Format status for search item ENTRY."
@@ -129,26 +129,46 @@
                      nil  ;; no require-match
                      pr-review-search-default-query)))
 
+(defun pr-review--search-read-host ()
+  "Read forge host for search."
+   ;; SEARCH only support github for now
+  (let* ((forges-alist-github (seq-filter (lambda (v) (eq (cadr v) 'github)) pr-review-forges-alist)))
+    (if (length= forges-alist-github 1)
+        (caar forges-alist-github)
+      (completing-read "Select forge: "
+                       (mapcar #'car forges-alist-github)
+                       nil t))))
+
 ;;;###autoload
-(defun pr-review-search (query)
+(defun pr-review-search (query &optional host)
   "Search PRs using a custom QUERY and list result in buffer.
 See github docs for syntax of QUERY.
 When called interactively, you will be asked to enter the QUERY."
-  (interactive (list (pr-review--search-read-query)))
+  (interactive (nreverse (list (pr-review--search-read-host)
+                               (pr-review--search-read-query))))
   (with-current-buffer (get-buffer-create "*pr-review search*")
-    (pr-review-search-mode)
-    (setq-local pr-review--search-query query)
-    (pr-review--search-refresh)
-    (tabulated-list-print)
-    (switch-to-buffer (current-buffer))))
+    (let* ((host (or host (caar pr-review-forges-alist)))
+           (forge (nth 0 (alist-get host pr-review-forges-alist nil nil 'equal))))
+      (pr-review-search-mode)
+      (setq-local pr-review--host host
+                  pr-review--forge forge
+                  pr-review--search-query query)
+      (pr-review--search-refresh)
+      (tabulated-list-print)
+      (switch-to-buffer (current-buffer)))))
 
 ;;;###autoload
-(defun pr-review-search-open (query)
+(defun pr-review-search-open (query &optional host)
   "Search PRs using a custom QUERY and open one of them.
 See github docs for syntax of QUERY.
 When called interactively, you will be asked to enter the QUERY."
-  (interactive (list (pr-review--search-read-query)))
-  (let* ((prs (pr-review--search-prs query))
+  (interactive (nreverse (list (pr-review--search-read-host)
+                               (pr-review--search-read-query))))
+  (let* ((host (or host (caar pr-review-forges-alist)))
+         (forge (nth 0 (alist-get host pr-review-forges-alist nil nil 'equal)))
+         (pr-review--host host)
+         (pr-review--forge forge)
+         (prs (pr-review--search-prs query))
          (prs-alist
           (mapcar
            (lambda (pr)
