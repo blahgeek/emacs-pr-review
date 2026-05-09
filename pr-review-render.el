@@ -853,6 +853,16 @@ COMMITS is a list of (abbrev-sha full-sha title)"
                  'action (lambda (_) (pr-review-comment)))
   (insert "\n"))
 
+(defun pr-review--insert-misc-action-buttons ()
+  "Insert misc action buttons at the end of page."
+  (when (equal (alist-get 'state pr-review--pr-info) "OPEN")
+    (insert-button (if (eq t (alist-get 'isDraft pr-review--pr-info))
+                       "MARK READY FOR REVIEW"
+                     "CONVERT TO DRAFT")
+                   'face 'pr-review-button-face
+                   'action (lambda (_) (pr-review-toggle-draft)))
+    (insert "\n\n")))
+
 (defun pr-review--insert-merge-close-reopen-action-buttons ()
   "Insert text and buttons for merge, close or reopen."
   (insert "Merge pull request with method:")
@@ -865,13 +875,6 @@ COMMITS is a list of (abbrev-sha full-sha title)"
     (insert-button (upcase (symbol-name close-or-reopen-action))
                    'face 'pr-review-button-face
                    'action (lambda (_) (pr-review-close-or-reopen))))
-  (when (equal (alist-get 'state pr-review--pr-info) "OPEN")
-    (insert ", or ")
-    (insert-button (if (eq t (alist-get 'isDraft pr-review--pr-info))
-                       "MARK READY FOR REVIEW"
-                     "CONVERT TO DRAFT")
-                   'face 'pr-review-button-face
-                   'action (lambda (_) (pr-review-toggle-draft))))
   (insert "\n"))
 
 (defun pr-review--is-timeline-items-groupable (item-a item-b)
@@ -933,6 +936,10 @@ it can be displayed in a single line."
               (propertize .headRefName 'face 'pr-review-branch-face))
       (pr-review--insert-labels-info pr)
       (insert "\n")
+      (when (eq t .isDraft)
+        (insert-button "DRAFT" 'face '(pr-review-error-state-face pr-review-link-face)
+                       'action (lambda (_) (pr-review-toggle-draft)))
+        (insert " - "))
       (insert (pr-review--propertize-keyword .state)
               (if (equal .state "OPEN")
                   (concat " - " (pr-review--propertize-keyword .mergeable))
@@ -988,6 +995,7 @@ it can be displayed in a single line."
                     (format " - Only viewing selected %d commits" (length pr-review--selected-commits))))))
       (pr-review--insert-diff diff))
     (insert "\n")
+    (pr-review--insert-misc-action-buttons)
     (pr-review--insert-review-action-buttons)
     (pr-review--insert-merge-close-reopen-action-buttons)
     (pr-review--insert-in-diff-review-thread-links)
@@ -1003,10 +1011,7 @@ it can be displayed in a single line."
       (oset section title .title)
       (oset section updatable .viewerCanUpdate)
       (magit-insert-heading
-        (propertize (alist-get 'title pr) 'face 'pr-review-title-face)
-        (when (eq t .isDraft)
-          (concat " " (propertize "[DRAFT]"
-                                  'face 'pr-review-info-state-face)))))
+        (propertize (alist-get 'title pr) 'face 'pr-review-title-face)))
     (insert "\n")
     (pr-review--insert-pr-body pr diff)))
 
